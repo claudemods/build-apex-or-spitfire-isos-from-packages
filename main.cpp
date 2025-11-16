@@ -23,7 +23,7 @@ const std::string COLOR_ORANGE = "\033[38;5;208m";
 const std::string COLOR_PURPLE = "\033[38;5;93m";
 const std::string COLOR_RESET = "\033[0m";
 
-class ClaudemodsCreateer {
+class ClaudemodsInstaller {
 private:
     std::string target_folder;
     std::string new_username;
@@ -34,6 +34,15 @@ private:
     
     // Terminal control for arrow keys
     struct termios oldt, newt;
+
+    // Get current working directory
+    std::string getCurrentDir() {
+        char cwd[1024];
+        if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+            return std::string(cwd);
+        }
+        return ".";
+    }
 
     // ADD ZIP EXTRACTION FUNCTION
     bool extractRequiredFiles() {
@@ -62,7 +71,7 @@ private:
         std::cout << "██║░░██╗██║░░░░░██╔══██║██║░░░██║██║░░██║██╔══╝░░██║╚██╔╝██║██║░░██║██║░░██║░╚═══██╗" << std::endl;
         std::cout << "╚█████╔╝███████╗██║░░██║╚██████╔╝██████╔╝███████╗██║░╚═╝░██║╚█████╔╝██████╔╝██████╔╝" << std::endl;
         std::cout << "░╚════╝░╚══════╝╚═╝░░░░░░╚═════╝░╚═════╝░╚══════╝╚═╝░░░░░╚═╝░╚════╝░╚═════╝░╚═════╝░" << std::endl;
-        std::cout << COLOR_CYAN << "claudemods distribution iso creator Beta v1.0 16-11-2025" << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "claudemods distribution installer Beta DevBranch v1.01 15-11-2025" << COLOR_RESET << std::endl;
         std::cout << COLOR_CYAN << "Supports Ext4 And Btrfs filesystems" << COLOR_RESET << std::endl;
         std::cout << std::endl;
     }
@@ -152,7 +161,12 @@ private:
     }
 
     void get_user_input() {
-        target_folder = get_input("Enter target folder path: ");
+        // Get base path and create claudemods-distro folder
+        std::string base_path = get_input("Enter base installation path (e.g., /mnt): ");
+        target_folder = base_path + "/claudemods-distro";
+        
+        std::cout << COLOR_CYAN << "Installation folder: " << target_folder << COLOR_RESET << std::endl;
+        
         new_username = get_input("Enter username: ");
         root_password = get_input("Enter root password: ");
         user_password = get_input("Enter user password: ");
@@ -242,9 +256,11 @@ private:
 
     // SPITFIRE CKGE MINIMAL - EXACT COMMANDS
     void install_spitfire_ckge_minimal() {
-        std::cout << COLOR_ORANGE << "Createing Spitfire CKGE Minimal..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // EXACT SPITFIRE MINIMAL COMMANDS
         create_directory(target_folder);
@@ -258,14 +274,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop");
@@ -279,14 +294,14 @@ private:
 
         apply_timezone_keyboard_settings();
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/term.sh " + target_folder + "/usr/local/bin");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/term.sh " + target_folder + "/usr/local/bin");
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/term.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/");
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable term.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -301,14 +316,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/spitfire-minimal.zip -d " + target_folder + "/home/" + new_username + "/");
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
         execute_command("chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/spitfire-minimal.zip");
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
@@ -338,9 +353,11 @@ private:
 
     // SPITFIRE CKGE FULL - DIFFERENT COMMANDS
     void install_spitfire_ckge_full() {
-        std::cout << COLOR_ORANGE << "Createing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // DIFFERENT FULL COMMANDS
         create_directory(target_folder);
@@ -354,14 +371,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-full"); // DIFFERENT PACKAGE
@@ -375,14 +391,14 @@ private:
 
         apply_timezone_keyboard_settings();
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // DIFFERENT TERM SCRIPT
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // DIFFERENT TERM SCRIPT
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // DIFFERENT SERVICE
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // DIFFERENT SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -397,14 +413,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/spitfire-full.zip -d " + target_folder + "/home/" + new_username + "/"); // DIFFERENT ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
         execute_command("chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/spitfire-full.zip"); // DIFFERENT ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
@@ -434,9 +450,11 @@ private:
 
     // SPITFIRE CKGE MINIMAL DEV - DIFFERENT COMMANDS
     void install_spitfire_ckge_minimal_dev() {
-        std::cout << COLOR_ORANGE << "Createing Spitfire CKGE Minimal Dev..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal Dev..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // DEV COMMANDS
         create_directory(target_folder);
@@ -450,14 +468,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-dev"); // DEV PACKAGE
@@ -471,14 +488,14 @@ private:
 
         apply_timezone_keyboard_settings();
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/term.sh " + target_folder + "/usr/local/bin");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/term.sh " + target_folder + "/usr/local/bin");
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/term.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/");
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable term.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -493,14 +510,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/spitfire-minimal.zip -d " + target_folder + "/home/" + new_username + "/");
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
         execute_command("chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/spitfire-minimal.zip");
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
@@ -530,9 +547,11 @@ private:
 
     // SPITFIRE CKGE FULL DEV - DIFFERENT COMMANDS
     void install_spitfire_ckge_full_dev() {
-        std::cout << COLOR_ORANGE << "Createing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // FULL DEV COMMANDS
         create_directory(target_folder);
@@ -546,14 +565,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-fulldev"); // FULL DEV PACKAGE
@@ -567,14 +585,14 @@ private:
 
         apply_timezone_keyboard_settings();
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes");
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // FULL DEV TERM
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // FULL DEV TERM
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // FULL DEV SERVICE
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // FULL DEV SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -589,14 +607,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/spitfire-full.zip -d " + target_folder + "/home/" + new_username + "/"); // FULL ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt");
         execute_command("chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/spitfire-full.zip"); // FULL ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
@@ -626,9 +644,11 @@ private:
 
     // APEX CKGE MINIMAL - COMPLETELY DIFFERENT COMMANDS
     void install_apex_ckge_minimal() {
-        std::cout << COLOR_PURPLE << "Createing Apex CKGE Minimal..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // APEX SPECIFIC COMMANDS
         create_directory(target_folder);
@@ -642,14 +662,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop"); // SAME PACKAGE BUT DIFFERENT THEMES
@@ -664,14 +683,14 @@ private:
         apply_timezone_keyboard_settings();
 
         // APEX SPECIFIC FILES
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // DIFFERENT GRUB
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // DIFFERENT GRUB.CFG
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // DIFFERENT THEME
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // DIFFERENT GRUB
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // DIFFERENT GRUB.CFG
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // DIFFERENT THEME
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/term.sh " + target_folder + "/usr/local/bin"); // APEX TERM SCRIPT
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/term.sh " + target_folder + "/usr/local/bin"); // APEX TERM SCRIPT
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/term.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/"); // APEX SERVICE
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/"); // APEX SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable term.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -687,14 +706,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/apex-minimal.zip -d " + target_folder + "/home/" + new_username + "/"); // APEX ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
         execute_command("chmod +x " + target_folder + "/opt/tweaksapex.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\""); // APEX TWEAKS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/apex-minimal.zip"); // APEX ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh"); // APEX TWEAKS
@@ -724,9 +743,11 @@ private:
 
     // APEX CKGE FULL - DIFFERENT COMMANDS
     void install_apex_ckge_full() {
-        std::cout << COLOR_PURPLE << "Createing Apex CKGE Full..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // APEX FULL COMMANDS
         create_directory(target_folder);
@@ -740,14 +761,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-full"); // FULL PACKAGE
@@ -762,14 +782,14 @@ private:
         apply_timezone_keyboard_settings();
 
         // APEX FULL FILES
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // APEX FULL TERM
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // APEX FULL TERM
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // APEX FULL SERVICE
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // APEX FULL SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -785,14 +805,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/apex-full.zip -d " + target_folder + "/home/" + new_username + "/"); // APEX FULL ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
         execute_command("chmod +x " + target_folder + "/opt/tweaksapex.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\""); // APEX TWEAKS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/apex-full.zip"); // APEX FULL ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh"); // APEX TWEAKS
@@ -822,9 +842,11 @@ private:
 
     // APEX CKGE MINIMAL DEV - DIFFERENT COMMANDS
     void install_apex_ckge_minimal_dev() {
-        std::cout << COLOR_PURPLE << "Createing Apex CKGE Minimal Dev..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal Dev..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // APEX MINIMAL DEV COMMANDS
         create_directory(target_folder);
@@ -838,14 +860,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-dev"); // DEV PACKAGE
@@ -860,14 +881,14 @@ private:
         apply_timezone_keyboard_settings();
 
         // APEX DEV FILES
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/term.sh " + target_folder + "/usr/local/bin"); // APEX TERM
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/term.sh " + target_folder + "/usr/local/bin"); // APEX TERM
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/term.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/"); // APEX SERVICE
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/term.service " + target_folder + "/etc/systemd/system/"); // APEX SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable term.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -883,14 +904,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/apex-minimal.zip -d " + target_folder + "/home/" + new_username + "/"); // APEX MINIMAL ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
         execute_command("chmod +x " + target_folder + "/opt/tweaksapex.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\""); // APEX TWEAKS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/apex-minimal.zip"); // APEX MINIMAL ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh"); // APEX TWEAKS
@@ -920,9 +941,11 @@ private:
 
     // APEX CKGE FULL DEV - DIFFERENT COMMANDS
     void install_apex_ckge_full_dev() {
-        std::cout << COLOR_PURPLE << "Createing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
         get_user_input();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
 
         // APEX FULL DEV COMMANDS
         create_directory(target_folder);
@@ -936,14 +959,13 @@ private:
         create_directory(target_folder + "/etc/sddm.conf.d");
         create_directory(target_folder + "/home/" + new_username + "/.config");
         create_directory(target_folder + "/home/" + new_username + "/.local/share/konsole");
-        create_directory(target_folder + "/opt");
 
-        execute_command("cp -r /opt/claudemods-distribution-installer/vconsole.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc");
         execute_command("cp -r /etc/resolv.conf " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d " + target_folder + "/etc");
-        execute_command("unzip -o /opt/claudemods-distribution-installer/pacman.d.zip -d /etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf " + target_folder + "/etc");
-        execute_command("cp -r /opt/claudemods-distribution-installer/pacman.conf /etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc");
+        execute_command("unzip -o " + currentDir + "/pacman.d.zip -d /etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc");
+        execute_command("cp -r " + currentDir + "/pacman.conf /etc");
 
         execute_command("pacman -Sy");
         execute_command("pacstrap " + target_folder + " claudemods-desktop-fulldev"); // FULL DEV PACKAGE
@@ -958,14 +980,14 @@ private:
         apply_timezone_keyboard_settings();
 
         // APEX FULL DEV FILES
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default"); // APEX GRUB
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub"); // APEX GRUB.CFG
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes"); // APEX THEME
         execute_command("chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // APEX FULL TERM
+        execute_command("cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin"); // APEX FULL TERM
         execute_command("chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // APEX FULL SERVICE
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/"); // APEX FULL SERVICE
         execute_command("chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
         execute_command("chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
@@ -981,14 +1003,14 @@ private:
         execute_command("unzip -o " + target_folder + "/Arch-Systemtool.zip -d " + target_folder + "/opt");
         execute_command("unzip -o " + target_folder + "/apex-full.zip -d " + target_folder + "/home/" + new_username + "/"); // APEX FULL ZIP
         execute_command("mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d"); // APEX SETTINGS
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt"); // APEX TWEAKS
         execute_command("chmod +x " + target_folder + "/opt/tweaksapex.sh");
         execute_command("chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\""); // APEX TWEAKS
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("cp -r /opt/claudemods-distribution-installer/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/"); // APEX KONSOLERC
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes"); // APEX LOGIN
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("rm -rf " + target_folder + "/Arch-Systemtool.zip");
         execute_command("rm -rf " + target_folder + "/apex-full.zip"); // APEX FULL ZIP
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh"); // APEX TWEAKS
@@ -1018,19 +1040,19 @@ private:
 
     void show_main_menu() {
         std::vector<std::string> main_options = {
-            "Create Spitfire CKGE Minimal Iso",
-            "Create Spitfire CKGE Full Iso", 
-            "Create Spitfire CKGE Minimal Dev Iso",
-            "Create Spitfire CKGE Full Dev Iso",
-            "Create Apex CKGE Minimal Iso",
-            "Create Apex CKGE Full Iso",
-            "Create Apex CKGE Minimal Dev Iso", 
-            "Create Apex CKGE Full Dev Iso",
+            "Install Spitfire CKGE Minimal",
+            "Install Spitfire CKGE Full", 
+            "Install Spitfire CKGE Minimal Dev",
+            "Install Spitfire CKGE Full Dev",
+            "Install Apex CKGE Minimal",
+            "Install Apex CKGE Full",
+            "Install Apex CKGE Minimal Dev", 
+            "Install Apex CKGE Full Dev",
             "Exit"
         };
 
         while (true) {
-            int choice = show_menu(main_options, "claudemods Distribution Createer");
+            int choice = show_menu(main_options, "claudemods Distribution Installer");
 
             switch(choice) {
                 case 0:
@@ -1081,7 +1103,7 @@ public:
 };
 
 int main() {
-    ClaudemodsCreateer installer;
+    ClaudemodsInstaller installer;
     installer.run();
     return 0;
 }
