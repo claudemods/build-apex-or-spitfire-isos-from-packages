@@ -83,8 +83,6 @@ if [[ "$DISTRO" == "arch" || "$DISTRO" == "cachyos" ]]; then
     run_command_cyan "cd /home/$USER/build-apex-or-spitfire-isos-from-packages/updater && g++ -std=c++23 main.cpp -o updater.bin"
     print_status "Installing"
     run_command_cyan "cd /home/$USER/build-apex-or-spitfire-isos-from-packages/updater && ./updater.bin"
-    print_status "Cleaning up"
-    run_command_cyan "rm -rf /home/$USER/build-apex-or-spitfire-isos-from-packages"
     else
         print_error "Unsupported distribution: $DISTRO"
         exit 1
