@@ -10,6 +10,11 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <algorithm>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <errno.h>
 
 // Include your resource manager
 #include "resources.h"
@@ -31,7 +36,7 @@ private:
     std::string user_password;
     std::string timezone;
     std::string keyboard_layout;
-    
+
     // Terminal control for arrow keys
     struct termios oldt, newt;
 
@@ -47,18 +52,18 @@ private:
     // ADD ZIP EXTRACTION FUNCTION
     bool extractRequiredFiles() {
         std::cout << COLOR_CYAN << "Extracting required files..." << COLOR_RESET << std::endl;
-        
+
         // Use your existing resource manager functions
         if (!ResourceManager::extractEmbeddedZip("")) {
             std::cerr << COLOR_RED << "Failed to extract embedded ZIP files!" << COLOR_RESET << std::endl;
             return false;
         }
-        
+
         if (!ResourceManager::extractCalamaresResources("")) {
             std::cerr << COLOR_RED << "Failed to extract Calamares resources!" << COLOR_RESET << std::endl;
             return false;
         }
-        
+
         std::cout << COLOR_GREEN << "All required files extracted successfully!" << COLOR_RESET << std::endl;
         return true;
     }
@@ -146,11 +151,48 @@ private:
         return input;
     }
 
-    
+
     int execute_command(const std::string& cmd) {
-        std::cout << COLOR_CYAN;
-        int status = system(cmd.c_str());
-        std::cout << COLOR_RESET;
+        FILE* pipe = popen((cmd + " 2>&1").c_str(), "r");
+        if (!pipe) {
+            std::cerr << COLOR_RED << "Failed to execute command!" << COLOR_RESET << std::endl;
+            return -1;
+        }
+
+        // Set the stream to non-blocking mode for more responsive output
+        int fd = fileno(pipe);
+        int flags = fcntl(fd, F_GETFL, 0);
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+        char buffer;
+        std::string line;
+
+        while (true) {
+            ssize_t bytes_read = read(fd, &buffer, 1);
+
+            if (bytes_read > 0) {
+                // Immediately output each character in cyan
+                std::cout << COLOR_CYAN << buffer << std::flush;
+
+                // If we hit a newline, reset the line
+                if (buffer == '\n') {
+                    line.clear();
+                } else {
+                    line += buffer;
+                }
+            }
+            else if (bytes_read == 0) {
+                // End of stream
+                break;
+            }
+            // If bytes_read == -1 and errno == EAGAIN, just means no data available yet
+            // We'll continue the loop
+
+            // Small delay to prevent CPU spinning but maintain responsiveness
+            usleep(1000); // 1ms delay
+        }
+
+        int status = pclose(pipe);
         if (status != 0) {
             std::cerr << COLOR_RED << "Error executing command!" << COLOR_RESET << std::endl;
         }
@@ -165,13 +207,13 @@ private:
         // Get base path and create claudemods-distro folder
         std::string base_path = get_input("Enter base installation path (e.g., /mnt): ");
         target_folder = base_path + "/claudemods-distro";
-        
+
         std::cout << COLOR_CYAN << "Installation folder: " << target_folder << COLOR_RESET << std::endl;
-        
+
         new_username = get_input("Enter username: ");
         root_password = get_input("Enter root password: ");
         user_password = get_input("Enter user password: ");
-        
+
         // Get timezone and keyboard layout
         std::vector<std::string> timezone_options = {
             "America/New_York (US English)",
@@ -221,19 +263,19 @@ private:
     }
 
     void mount_system_dirs() {
-    execute_command("sudo mkdir -p " + target_folder + "/dev");
-    execute_command("sudo mkdir -p " + target_folder + "/dev/pts");
-    execute_command("sudo mkdir -p " + target_folder + "/proc");
-    execute_command("sudo mkdir -p " + target_folder + "/sys");
-    execute_command("sudo mkdir -p " + target_folder + "/run");
-    execute_command("sudo mkdir -p " + target_folder + "/etc");
-    
-    execute_command("sudo mount --bind /dev " + target_folder + "/dev");
-    execute_command("sudo mount --bind /dev/pts " + target_folder + "/dev/pts");
-    execute_command("sudo mount --bind /proc " + target_folder + "/proc");
-    execute_command("sudo mount --bind /sys " + target_folder + "/sys");
-    execute_command("sudo mount --bind /run " + target_folder + "/run");
-}
+        execute_command("sudo mkdir -p " + target_folder + "/dev");
+        execute_command("sudo mkdir -p " + target_folder + "/dev/pts");
+        execute_command("sudo mkdir -p " + target_folder + "/proc");
+        execute_command("sudo mkdir -p " + target_folder + "/sys");
+        execute_command("sudo mkdir -p " + target_folder + "/run");
+        execute_command("sudo mkdir -p " + target_folder + "/etc");
+
+        execute_command("sudo mount --bind /dev " + target_folder + "/dev");
+        execute_command("sudo mount --bind /dev/pts " + target_folder + "/dev/pts");
+        execute_command("sudo mount --bind /proc " + target_folder + "/proc");
+        execute_command("sudo mount --bind /sys " + target_folder + "/sys");
+        execute_command("sudo mount --bind /run " + target_folder + "/run");
+    }
 
     void unmount_system_dirs() {
         execute_command("sudo umount " + target_folder + "/dev/pts");
@@ -274,14 +316,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -307,11 +349,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop");
-        
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -342,12 +384,12 @@ private:
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
         create_user();
-        
+
         // CREATE USER HOME DIRECTORY STRUCTURE
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
-        
+
         execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
 
@@ -380,7 +422,7 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/spitfire/" + home_folder + "/g' " + user_places_file;
@@ -390,136 +432,6 @@ private:
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
-    }
-
-    // SPITFIRE CKGE FULL - FIXED
-    void install_spitfire_ckge_full() {
-        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
-        get_user_input();
-        std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-        std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
-
-        // CREATE TARGET DIRECTORY FIRST
-        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
-        execute_command("sudo mkdir -p " + target_folder);
-        
-        // VERIFY DIRECTORY WAS CREATED
-        struct stat info;
-        if (stat(target_folder.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-        
-        if (!(info.st_mode & S_IFDIR)) {
-            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-
-        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
-
-        // CREATE ESSENTIAL DIRECTORIES BEFORE COPYING FILES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/share/grub/themes");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/share/plymouth/themes");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/local/bin");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/systemd/system");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
-
-        // VERIFY AND COPY FILES WITH EXACT NAMES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc/pacman.d");
-        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d /etc/pacman.d");
-        execute_command("sudo cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc/pacman.conf");
-        execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
-
-        execute_command("sudo pacman -Sy");
-        
-        // INSTALL BASE SYSTEM WITH PACSTRAP
-        std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
-        
-        // VERIFY PACSTRAP SUCCESS
-        std::string test_bin = target_folder + "/bin/bash";
-        if (stat(test_bin.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
-            return;
-        }
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-        execute_command("sudo touch " + target_folder + "/boot/grub/grub.cfg.new");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-
-        // FIXED FILE PATHS - ENSURE CORRECT NAMES
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default/grub");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub/grub.cfg");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes/cachyos");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/cachyos-bootanimation");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin/termfull.sh");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/termfull.service");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
-
-        create_user();
-
-        // CREATE USER HOME DIRECTORY STRUCTURE
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
-
-        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
-
-        execute_command("cd " + target_folder);
-        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/claudemods-desktop/spitfire-full.zip");
-        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/arch-systemtool/Arch-Systemtool.zip");
-        execute_command("sudo unzip -o " + currentDir + "/Arch-Systemtool.zip -d " + target_folder + "/opt/Arch-Systemtool");
-        execute_command("sudo unzip -o " + currentDir + "/spitfire-full.zip -d " + target_folder + "/home/" + new_username + "/");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d/kde_settings.conf");
-        execute_command("sudo cp " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt/tweaksspitfire.sh");
-        execute_command("sudo chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/konsolerc");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes/SpitFireLogin");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.colorscheme");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.profile");
-        execute_command("sudo rm -rf " + currentDir + "/Arch-Systemtool.zip");
-        execute_command("sudo rm -rf " + currentDir + "/spitfire-full.zip");
-        execute_command("sudo rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
-
-        // Fix user-places.xbel
-        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
-        FILE* pipe = popen(cmd.c_str(), "r");
-        if (pipe) {
-            char buffer[128];
-            std::string home_folder;
-            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                home_folder = buffer;
-                home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
-            }
-            pclose(pipe);
-            
-            if (!home_folder.empty()) {
-                std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
-                std::string sed_cmd = "sudo sed -i 's/spitfire/" + home_folder + "/g' " + user_places_file;
-                execute_command(sed_cmd);
-            }
-        }
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Spitfire CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
     }
 
     // SPITFIRE CKGE MINIMAL DEV - FIXED
@@ -534,14 +446,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -567,11 +479,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-dev");
-        
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -640,7 +552,7 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/spitfire/" + home_folder + "/g' " + user_places_file;
@@ -652,11 +564,11 @@ private:
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
     }
 
-    // SPITFIRE CKGE FULL DEV - FIXED
-    void install_spitfire_ckge_full_dev() {
-        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
+    // SPITFIRE CKGE FULL - FIXED
+    void install_spitfire_ckge_full() {
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
         get_user_input();
-        std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
         std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
@@ -664,14 +576,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -697,11 +609,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
-        
+        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -770,7 +682,137 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
+            if (!home_folder.empty()) {
+                std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
+                std::string sed_cmd = "sudo sed -i 's/spitfire/" + home_folder + "/g' " + user_places_file;
+                execute_command(sed_cmd);
+            }
+        }
+
+        unmount_system_dirs();
+        std::cout << COLOR_GREEN << "Spitfire CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
+    }
+
+    // SPITFIRE CKGE FULL DEV - FIXED
+    void install_spitfire_ckge_full_dev() {
+        std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
+        get_user_input();
+        std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
+        std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
+
+        // CREATE TARGET DIRECTORY FIRST
+        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
+        execute_command("sudo mkdir -p " + target_folder);
+
+        // VERIFY DIRECTORY WAS CREATED
+        struct stat info;
+        if (stat(target_folder.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
+            return;
+        }
+
+        if (!(info.st_mode & S_IFDIR)) {
+            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
+            return;
+        }
+
+        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
+
+        // CREATE ESSENTIAL DIRECTORIES BEFORE COPYING FILES
+        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/share/grub/themes");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/share/plymouth/themes");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/local/bin");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/systemd/system");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
+
+        // VERIFY AND COPY FILES WITH EXACT NAMES
+        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
+        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
+        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc/pacman.d");
+        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d /etc/pacman.d");
+        execute_command("sudo cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc/pacman.conf");
+        execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
+
+        execute_command("sudo pacman -Sy");
+
+        // INSTALL BASE SYSTEM WITH PACSTRAP
+        std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
+        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+
+        // VERIFY PACSTRAP SUCCESS
+        std::string test_bin = target_folder + "/bin/bash";
+        if (stat(test_bin.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
+            return;
+        }
+
+        execute_command("sudo mkdir -p " + target_folder + "/boot");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+        execute_command("sudo touch " + target_folder + "/boot/grub/grub.cfg.new");
+
+        mount_system_dirs();
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
+
+        apply_timezone_keyboard_settings();
+
+        // FIXED FILE PATHS - ENSURE CORRECT NAMES
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default/grub");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub.cfg " + target_folder + "/boot/grub/grub.cfg");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes/cachyos");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/cachyos-bootanimation");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin/termfull.sh");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/termfull.service");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
+
+        create_user();
+
+        // CREATE USER HOME DIRECTORY STRUCTURE
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
+
+        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
+
+        execute_command("cd " + target_folder);
+        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/claudemods-desktop/spitfire-full.zip");
+        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/arch-systemtool/Arch-Systemtool.zip");
+        execute_command("sudo unzip -o " + currentDir + "/Arch-Systemtool.zip -d " + target_folder + "/opt/Arch-Systemtool");
+        execute_command("sudo unzip -o " + currentDir + "/spitfire-full.zip -d " + target_folder + "/home/" + new_username + "/");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d/kde_settings.conf");
+        execute_command("sudo cp " + currentDir + "/spitfire-ckge-minimal/tweaksspitfire.sh " + target_folder + "/opt/tweaksspitfire.sh");
+        execute_command("sudo chmod +x " + target_folder + "/opt/tweaksspitfire.sh");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksspitfire.sh " + new_username + "'\"");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/konsolerc");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/SpitFireLogin " + target_folder + "/usr/share/sddm/themes/SpitFireLogin");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.colorscheme");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.profile");
+        execute_command("sudo rm -rf " + currentDir + "/Arch-Systemtool.zip");
+        execute_command("sudo rm -rf " + currentDir + "/spitfire-full.zip");
+        execute_command("sudo rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
+
+        // Fix user-places.xbel
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        FILE* pipe = popen(cmd.c_str(), "r");
+        if (pipe) {
+            char buffer[128];
+            std::string home_folder;
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                home_folder = buffer;
+                home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
+            }
+            pclose(pipe);
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/spitfire/" + home_folder + "/g' " + user_places_file;
@@ -794,14 +836,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -827,11 +869,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop");
-        
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -900,7 +942,7 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/apex/" + home_folder + "/g' " + user_places_file;
@@ -910,136 +952,6 @@ private:
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
-    }
-
-    // APEX CKGE FULL - FIXED
-    void install_apex_ckge_full() {
-        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full..." << COLOR_RESET << std::endl;
-        get_user_input();
-        std::cout << COLOR_CYAN << "Starting Apex CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-        std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
-
-        // CREATE TARGET DIRECTORY FIRST
-        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
-        execute_command("sudo mkdir -p " + target_folder);
-        
-        // VERIFY DIRECTORY WAS CREATED
-        struct stat info;
-        if (stat(target_folder.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-        
-        if (!(info.st_mode & S_IFDIR)) {
-            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-
-        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
-
-        // CREATE ESSENTIAL DIRECTORIES BEFORE COPYING FILES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/share/grub/themes");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/share/plymouth/themes");
-        execute_command("sudo mkdir -p " + target_folder + "/usr/local/bin");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/systemd/system");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
-
-        // VERIFY AND COPY FILES WITH EXACT NAMES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc/pacman.d");
-        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d /etc/pacman.d");
-        execute_command("sudo cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc/pacman.conf");
-        execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
-
-        execute_command("sudo pacman -Sy");
-        
-        // INSTALL BASE SYSTEM WITH PACSTRAP
-        std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
-        
-        // VERIFY PACSTRAP SUCCESS
-        std::string test_bin = target_folder + "/bin/bash";
-        if (stat(test_bin.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
-            return;
-        }
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-        execute_command("sudo touch " + target_folder + "/boot/grub/grub.cfg.new");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-
-        // FIXED FILE PATHS - ENSURE CORRECT NAMES
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default/grub");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub/grub.cfg");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes/cachyos");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/cachyos-bootanimation");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin/termfull.sh");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/termfull.service");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
-
-        create_user();
-
-        // CREATE USER HOME DIRECTORY STRUCTURE
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
-        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
-
-        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
-
-        execute_command("cd " + target_folder);
-        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/claudemods-desktop/apex-full.zip");
-        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/arch-systemtool/Arch-Systemtool.zip");
-        execute_command("sudo unzip -o " + currentDir + "/Arch-Systemtool.zip -d " + target_folder + "/opt/Arch-Systemtool");
-        execute_command("sudo unzip -o " + currentDir + "/apex-full.zip -d " + target_folder + "/home/" + new_username + "/");
-        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d/kde_settings.conf");
-        execute_command("sudo cp " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt/tweaksapex.sh");
-        execute_command("sudo chmod +x " + target_folder + "/opt/tweaksapex.sh");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\"");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/konsolerc");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes/ApexLogin2");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.colorscheme");
-        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.profile");
-        execute_command("sudo rm -rf " + currentDir + "/Arch-Systemtool.zip");
-        execute_command("sudo rm -rf " + currentDir + "/apex-full.zip");
-        execute_command("sudo rm -rf " + target_folder + "/opt/tweaksapex.sh");
-
-        // Fix user-places.xbel for APEX
-        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
-        FILE* pipe = popen(cmd.c_str(), "r");
-        if (pipe) {
-            char buffer[128];
-            std::string home_folder;
-            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                home_folder = buffer;
-                home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
-            }
-            pclose(pipe);
-            
-            if (!home_folder.empty()) {
-                std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
-                std::string sed_cmd = "sudo sed -i 's/apex/" + home_folder + "/g' " + user_places_file;
-                execute_command(sed_cmd);
-            }
-        }
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Apex CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
     }
 
     // APEX CKGE MINIMAL DEV - FIXED
@@ -1054,14 +966,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -1087,11 +999,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-dev");
-        
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -1160,7 +1072,7 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/apex/" + home_folder + "/g' " + user_places_file;
@@ -1172,11 +1084,11 @@ private:
         std::cout << COLOR_GREEN << "Apex CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
     }
 
-    // APEX CKGE FULL DEV - FIXED
-    void install_apex_ckge_full_dev() {
-        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
+    // APEX CKGE FULL - FIXED
+    void install_apex_ckge_full() {
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full..." << COLOR_RESET << std::endl;
         get_user_input();
-        std::cout << COLOR_CYAN << "Starting Apex CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "Starting Apex CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
         std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
@@ -1184,14 +1096,14 @@ private:
         // CREATE TARGET DIRECTORY FIRST
         std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
         execute_command("sudo mkdir -p " + target_folder);
-        
+
         // VERIFY DIRECTORY WAS CREATED
         struct stat info;
         if (stat(target_folder.c_str(), &info) != 0) {
             std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
             return;
         }
-        
+
         if (!(info.st_mode & S_IFDIR)) {
             std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
             return;
@@ -1217,11 +1129,11 @@ private:
         execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
 
         execute_command("sudo pacman -Sy");
-        
+
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
-        
+        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
         if (stat(test_bin.c_str(), &info) != 0) {
@@ -1290,7 +1202,137 @@ private:
                 home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
             }
             pclose(pipe);
-            
+
+            if (!home_folder.empty()) {
+                std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
+                std::string sed_cmd = "sudo sed -i 's/apex/" + home_folder + "/g' " + user_places_file;
+                execute_command(sed_cmd);
+            }
+        }
+
+        unmount_system_dirs();
+        std::cout << COLOR_GREEN << "Apex CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
+    }
+
+    // APEX CKGE FULL DEV - FIXED
+    void install_apex_ckge_full_dev() {
+        std::cout << COLOR_PURPLE << "Installing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
+        get_user_input();
+        std::cout << COLOR_CYAN << "Starting Apex CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
+        std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
+
+        // CREATE TARGET DIRECTORY FIRST
+        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
+        execute_command("sudo mkdir -p " + target_folder);
+
+        // VERIFY DIRECTORY WAS CREATED
+        struct stat info;
+        if (stat(target_folder.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
+            return;
+        }
+
+        if (!(info.st_mode & S_IFDIR)) {
+            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
+            return;
+        }
+
+        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
+
+        // CREATE ESSENTIAL DIRECTORIES BEFORE COPYING FILES
+        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/share/grub/themes");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/share/plymouth/themes");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/local/bin");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/systemd/system");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
+
+        // VERIFY AND COPY FILES WITH EXACT NAMES
+        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
+        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
+        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d " + target_folder + "/etc/pacman.d");
+        execute_command("sudo unzip -o " + currentDir + "/pacman.d.zip -d /etc/pacman.d");
+        execute_command("sudo cp -r " + currentDir + "/pacman.conf " + target_folder + "/etc/pacman.conf");
+        execute_command("sudo cp -r " + currentDir + "/pacman.conf /etc/pacman.conf");
+
+        execute_command("sudo pacman -Sy");
+
+        // INSTALL BASE SYSTEM WITH PACSTRAP
+        std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
+        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+
+        // VERIFY PACSTRAP SUCCESS
+        std::string test_bin = target_folder + "/bin/bash";
+        if (stat(test_bin.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
+            return;
+        }
+
+        execute_command("sudo mkdir -p " + target_folder + "/boot");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+        execute_command("sudo touch " + target_folder + "/boot/grub/grub.cfg.new");
+
+        mount_system_dirs();
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
+
+        apply_timezone_keyboard_settings();
+
+        // FIXED FILE PATHS - ENSURE CORRECT NAMES
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/grub " + target_folder + "/etc/default/grub");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/grub.cfg " + target_folder + "/boot/grub/grub.cfg");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/cachyos " + target_folder + "/usr/share/grub/themes/cachyos");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
+        execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/cachyos-bootanimation " + target_folder + "/usr/share/plymouth/themes/cachyos-bootanimation");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/termfull.sh " + target_folder + "/usr/local/bin/termfull.sh");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/local/bin/termfull.sh\"");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/termfull.service " + target_folder + "/etc/systemd/system/termfull.service");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable termfull.service >/dev/null 2>&1\"");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
+
+        create_user();
+
+        // CREATE USER HOME DIRECTORY STRUCTURE
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
+        execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
+
+        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
+
+        execute_command("cd " + target_folder);
+        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/claudemods-desktop/apex-full.zip");
+        execute_command("sudo wget --show-progress --no-check-certificate --continue --tries=10 --timeout=30 --waitretry=5 https://claudemodsreloaded.co.uk/arch-systemtool/Arch-Systemtool.zip");
+        execute_command("sudo unzip -o " + currentDir + "/Arch-Systemtool.zip -d " + target_folder + "/opt/Arch-Systemtool");
+        execute_command("sudo unzip -o " + currentDir + "/apex-full.zip -d " + target_folder + "/home/" + new_username + "/");
+        execute_command("sudo mkdir -p " + target_folder + "/etc/sddm.conf.d");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/kde_settings.conf " + target_folder + "/etc/sddm.conf.d/kde_settings.conf");
+        execute_command("sudo cp " + currentDir + "/apex-ckge-minimal/tweaksapex.sh " + target_folder + "/opt/tweaksapex.sh");
+        execute_command("sudo chmod +x " + target_folder + "/opt/tweaksapex.sh");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"su - " + new_username + " -c 'cd /opt && ./tweaksapex.sh " + new_username + "'\"");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/konsolerc " + target_folder + "/home/" + new_username + "/.config/konsolerc");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/ApexLogin2 " + target_folder + "/usr/share/sddm/themes/ApexLogin2");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.colorscheme");
+        execute_command("sudo cp -r " + currentDir + "/apex-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.profile");
+        execute_command("sudo rm -rf " + currentDir + "/Arch-Systemtool.zip");
+        execute_command("sudo rm -rf " + currentDir + "/apex-full.zip");
+        execute_command("sudo rm -rf " + target_folder + "/opt/tweaksapex.sh");
+
+        // Fix user-places.xbel for APEX
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        FILE* pipe = popen(cmd.c_str(), "r");
+        if (pipe) {
+            char buffer[128];
+            std::string home_folder;
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                home_folder = buffer;
+                home_folder.erase(std::remove(home_folder.begin(), home_folder.end(), '\n'), home_folder.end());
+            }
+            pclose(pipe);
+
             if (!home_folder.empty()) {
                 std::string user_places_file = target_folder + "/home/" + home_folder + "/.local/share/user-places.xbel";
                 std::string sed_cmd = "sudo sed -i 's/apex/" + home_folder + "/g' " + user_places_file;
@@ -1305,12 +1347,12 @@ private:
     void show_main_menu() {
         std::vector<std::string> main_options = {
             "Install Spitfire CKGE Minimal",
-            "Install Spitfire CKGE Full", 
             "Install Spitfire CKGE Minimal Dev",
+            "Install Spitfire CKGE Full",
             "Install Spitfire CKGE Full Dev",
             "Install Apex CKGE Minimal",
+            "Install Apex CKGE Minimal Dev",
             "Install Apex CKGE Full",
-            "Install Apex CKGE Minimal Dev", 
             "Install Apex CKGE Full Dev",
             "Exit"
         };
@@ -1323,10 +1365,10 @@ private:
                     install_spitfire_ckge_minimal();
                     break;
                 case 1:
-                    install_spitfire_ckge_full();
+                    install_spitfire_ckge_minimal_dev();
                     break;
                 case 2:
-                    install_spitfire_ckge_minimal_dev();
+                    install_spitfire_ckge_full();
                     break;
                 case 3:
                     install_spitfire_ckge_full_dev();
@@ -1335,10 +1377,10 @@ private:
                     install_apex_ckge_minimal();
                     break;
                 case 5:
-                    install_apex_ckge_full();
+                    install_apex_ckge_minimal_dev();
                     break;
                 case 6:
-                    install_apex_ckge_minimal_dev();
+                    install_apex_ckge_full();
                     break;
                 case 7:
                     install_apex_ckge_full_dev();
@@ -1360,7 +1402,7 @@ public:
             std::cerr << COLOR_RED << "Failed to extract required files. Cannot continue." << COLOR_RESET << std::endl;
             return;
         }
-        
+
         display_header();
         show_main_menu();
     }
