@@ -147,19 +147,15 @@ private:
     }
 
     
-    // Execute with sudo - output will automatically be in cyan
-    std::string full_cmd = "sudo " + cmd;
-    int status = system(full_cmd.c_str());
-    
-    // Reset color
-    std::cout << COLOR_RESET;
-    std::cout.flush();
-    
-    if (status != 0) {
-        std::cerr << COLOR_RED << "Error executing command!" << COLOR_RESET << std::endl;
+    int execute_command(const std::string& cmd) {
+        std::cout << COLOR_CYAN;
+        int status = system(cmd.c_str());
+        std::cout << COLOR_RESET;
+        if (status != 0) {
+            std::cerr << COLOR_RED << "Error executing command!" << COLOR_RESET << std::endl;
+        }
+        return status;
     }
-    return status;
-}
 
     bool create_directory(const std::string& path) {
         return system(("sudo mkdir -p " + path).c_str()) == 0;
@@ -630,7 +626,7 @@ private:
         execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.colorscheme " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.colorscheme");
         execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/claudemods-cyan.profile " + target_folder + "/home/" + new_username + "/.local/share/konsole/claudemods-cyan.profile");
         execute_command("sudo rm -rf " + currentDir + "/Arch-Systemtool.zip");
-        execute_command("sudo rm -rf " + CurrentDir + "/spitfire-minimal.zip");
+        execute_command("sudo rm -rf " + currentDir + "/spitfire-minimal.zip");
         execute_command("sudo rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
 
         // Fix user-places.xbel
