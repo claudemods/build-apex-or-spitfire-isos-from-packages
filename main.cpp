@@ -71,8 +71,7 @@ private:
         std::cout << "██║░░██╗██║░░░░░██╔══██║██║░░░██║██║░░██║██╔══╝░░██║╚██╔╝██║██║░░██║██║░░██║░╚═══██╗" << std::endl;
         std::cout << "╚█████╔╝███████╗██║░░██║╚██████╔╝██████╔╝███████╗██║░╚═╝░██║╚█████╔╝██████╔╝██████╔╝" << std::endl;
         std::cout << "░╚════╝░╚══════╝╚═╝░░░░░░╚═════╝░╚═════╝░╚══════╝╚═╝░░░░░╚═╝░╚════╝░╚═════╝░╚═════╝░" << std::endl;
-        std::cout << COLOR_CYAN << "claudemods distribution installer Beta DevBranch v1.01 15-11-2025" << COLOR_RESET << std::endl;
-        std::cout << COLOR_CYAN << "Supports Ext4 And Btrfs filesystems" << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "claudemods distribution iso creator Beta v1.0 16-11-2025" << COLOR_RESET << std::endl;
         std::cout << std::endl;
     }
 
@@ -148,9 +147,18 @@ private:
     }
 
     int execute_command(const std::string& cmd) {
+        // Set cyan color for all command output
         std::cout << COLOR_CYAN;
-        int status = system(cmd.c_str());
+        std::cout.flush();
+        
+        // Execute with sudo - output will automatically be in cyan
+        std::string full_cmd = "sudo " + cmd;
+        int status = system(full_cmd.c_str());
+        
+        // Reset color
         std::cout << COLOR_RESET;
+        std::cout.flush();
+        
         if (status != 0) {
             std::cerr << COLOR_RED << "Error executing command!" << COLOR_RESET << std::endl;
         }
@@ -158,7 +166,7 @@ private:
     }
 
     bool create_directory(const std::string& path) {
-        return system(("mkdir -p " + path).c_str()) == 0;
+        return system(("sudo mkdir -p " + path).c_str()) == 0;
     }
 
     void get_user_input() {
@@ -318,7 +326,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
 
         // Fix user-places.xbel
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -403,7 +411,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
 
         // Fix user-places.xbel
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -488,7 +496,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
 
         // Fix user-places.xbel
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -573,7 +581,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksspitfire.sh");
 
         // Fix user-places.xbel
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -658,7 +666,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh");
 
         // Fix user-places.xbel for APEX
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -743,7 +751,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh");
 
         // Fix user-places.xbel for APEX
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -828,7 +836,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh");
 
         // Fix user-places.xbel for APEX
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -913,7 +921,7 @@ private:
         execute_command("rm -rf " + target_folder + "/opt/tweaksapex.sh");
 
         // Fix user-places.xbel for APEX
-        std::string cmd = "ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
+        std::string cmd = "sudo ls -1 " + target_folder + "/home | grep -v '^\\.' | head -1";
         FILE* pipe = popen(cmd.c_str(), "r");
         if (pipe) {
             char buffer[128];
@@ -949,7 +957,7 @@ private:
         };
 
         while (true) {
-            int choice = show_menu(main_options, "claudemods Distribution Installer");
+            int choice = show_menu(main_options, "claudemods distribution iso creator");
 
             switch(choice) {
                 case 0:
