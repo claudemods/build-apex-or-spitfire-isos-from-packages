@@ -93,7 +93,7 @@ void* execute_update_thread(void* /*arg*/) {
     // ARCH AND CACHYOS INSTALLATION
     if (strcmp(detected_distro, "arch") == 0 || strcmp(detected_distro, "cachyos") == 0) {
         silent_command("cp /home/$USER/build-apex-or-spitfire-isos-from-packages/version/version.txt /home/$USER/build-apex-or-spitfire-isos-from-packages");
-        silent_command("cd /home/$USER/build-apex-or-spitfire-isos-from-packages && g++ -std=c++23 -Wl,--format=binary -Wl,build-image-arch-img.zip -Wl,calamares-files.zip -Wl,claudemods.zip -Wl,--format=default main.cpp -o claudemods-distro-iso >/dev/null 2>&1");
+        silent_command("cd /home/$USER/build-apex-or-spitfire-isos-from-packages && g++ -std=c++23 -Wl,--format=binary -Wl,build-image-arch-img.zip -Wl,calamares-files.zip -Wl,claudemods.zip -Wl,--format=default main.cpp -o claudemods-distro-iso-creator >/dev/null 2>&1");
     }
         
     // GET INSTALLED VERSION
@@ -142,7 +142,7 @@ int main() {
     std::cin >> response;
     
     if (response == 'y' || response == 'Y') {
-        system("cd /home/$USER && claudemods-distro-iso");
+        system("cd /home/$USER && claudemods-distro-iso-creator");
     }
     
     return EXIT_SUCCESS;
