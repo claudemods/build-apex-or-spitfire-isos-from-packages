@@ -20,5 +20,5 @@ claudemods distribution iso creator Beta v1.0 17-11-2025 (currently 95% is done!
 
 ```bash
 
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/claudemods/build-apex-or-spitfire-isos-from-packages/refs/heads/main/installer/patch.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/claudemods/claudemods-distribution-iso-creator-Beta/refs/heads/main/installer/patch.sh)"
 ```
