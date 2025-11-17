@@ -23,7 +23,7 @@
 
 ## Iso Creation Methods
 
-claudemods distributions iso creator Beta v1.0 17-11-2025 (currently 95% is done!!)
+claudemods distributions iso creator Beta v1.0 17-11-2025
 
 ```bash
 
