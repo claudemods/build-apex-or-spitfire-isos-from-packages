@@ -12,7 +12,7 @@
 
 ##  [Click Here For cachyos distribution readme](https://github.com/claudemods/claudemods-distribution-iso-creator-Beta/blob/main/cachyos-distribution.md)
 
-##  [Click Here For Arch Distribution readme](https://github.com/claudemods/claudemods-distribution-iso-creator-Beta/blob/main/arch-distribution.md)
+##  [Click Here For arch distribution readme](https://github.com/claudemods/claudemods-distribution-iso-creator-Beta/blob/main/arch-distribution.md)
 
 
 
