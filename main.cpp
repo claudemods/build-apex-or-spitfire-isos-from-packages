@@ -105,7 +105,6 @@ private:
         return ch;
     }
 
-    // Function to display menu with selection
     int show_menu(const std::vector<std::string>& options, const std::string& title, int selected = 0) {
         setup_terminal();
 
@@ -125,7 +124,35 @@ private:
                 } else {
                     std::cout << "  ";
                 }
-                std::cout << std::left << std::setw(58) << options[i] << "║" << std::endl;
+
+                // Create the menu line with proper formatting
+                std::string menu_line;
+                if (title == "claudemods distribution iso creator") {
+                    std::string setting_value;
+                    switch(i) {
+                        case 0: setting_value = target_folder.empty() ? "[Not Set]" : target_folder; break;
+                        case 1: setting_value = new_username.empty() ? "[Not Set]" : new_username; break;
+                        case 2: setting_value = root_password.empty() ? "[Not Set]" : "********"; break;
+                        case 3: setting_value = user_password.empty() ? "[Not Set]" : "********"; break;
+                        case 4: setting_value = timezone.empty() ? "[Not Set]" : timezone; break;
+                        case 5: setting_value = keyboard_layout.empty() ? "[Not Set]" : keyboard_layout; break;
+                        case 6: setting_value = current_distro_name.empty() ? "[Not Set]" : current_distro_name; break;
+                        default: setting_value = ""; break;
+                    }
+
+                    // Build the complete line with menu item and setting
+                    menu_line = options[i] + " " + setting_value;
+                } else {
+                    menu_line = options[i];
+                }
+
+                // Truncate if too long to fit in the box
+                if (menu_line.length() > 56) { // 60 - 4 for borders and spacing
+                    menu_line = menu_line.substr(0, 53) + "...";
+                }
+
+                std::cout << std::left << std::setw(56) << menu_line;
+                std::cout << "║" << std::endl;
             }
 
             std::cout << "╚══════════════════════════════════════════════════════════════╝" << std::endl;
@@ -133,11 +160,11 @@ private:
             std::cout << COLOR_YELLOW << "Use ↑↓ arrows to navigate, Enter to select" << COLOR_RESET << std::endl;
 
             int key = get_arrow_key();
-            if (key == 'A') { // Up arrow
+            if (key == 'A') {
                 selected = (selected - 1 + options.size()) % options.size();
-            } else if (key == 'B') { // Down arrow
+            } else if (key == 'B') {
                 selected = (selected + 1) % options.size();
-            } else if (key == 10) { // Enter
+            } else if (key == 10) {
                 restore_terminal();
                 return selected;
             }
@@ -543,6 +570,34 @@ private:
             }
         }
 
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -680,6 +735,34 @@ private:
                 execute_command(sed_cmd);
             }
         }
+
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -819,6 +902,34 @@ private:
             }
         }
 
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -956,6 +1067,34 @@ private:
                 execute_command(sed_cmd);
             }
         }
+
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -1095,6 +1234,34 @@ private:
             }
         }
 
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -1232,6 +1399,34 @@ private:
                 execute_command(sed_cmd);
             }
         }
+
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -1371,6 +1566,34 @@ private:
             }
         }
 
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -1508,6 +1731,34 @@ private:
                 execute_command(sed_cmd);
             }
         }
+
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
+        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
+
+        // Install in chroot
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
+
+        // Copy calamares config
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/calamares " + target_folder + "/etc/");
+
+        // Copy custom branding
+        execute_command("sudo cp -r " + currentDir + "/calamres-files/claudemods " + target_folder + "/usr/share/calamares/branding/");
+
+        // Extract extra files
+        execute_command("sudo unzip -o -q " + currentDir + "/calamres-files/extras.zip -d " + target_folder);
+
+        // Copy cmirsyncinstaller
+        execute_command("sudo cp -r " + currentDir + "/cmirsyncinstaller " + target_folder + "/usr/bin");
+
+        // Copy hooks
+        execute_command("sudo cp -r " + currentDir + "/working-hooks-btrfs-ext4/* /etc/initcpio");
+
+        // Remove manjaro branding
+        execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
