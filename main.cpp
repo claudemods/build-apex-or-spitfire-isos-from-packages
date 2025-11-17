@@ -30,7 +30,6 @@ const std::string COLOR_RESET = "\033[0m";
 
 class ClaudemodsInstaller {
 private:
-    std::string target_folder;
     std::string new_username;
     std::string root_password;
     std::string user_password;
@@ -48,6 +47,11 @@ private:
             return std::string(cwd);
         }
         return ".";
+    }
+
+    // Get target folder path (always in current directory)
+    std::string getTargetFolder() {
+        return getCurrentDir() + "/claudemods-distro";
     }
 
     // ADD ZIP EXTRACTION FUNCTION
@@ -130,7 +134,7 @@ private:
                 if (title == "claudemods distribution iso creator") {
                     std::string setting_value;
                     switch(i) {
-                        case 0: setting_value = target_folder.empty() ? "[Not Set]" : target_folder; break;
+                        case 0: setting_value = getTargetFolder(); break; // Always show current directory path
                         case 1: setting_value = new_username.empty() ? "[Not Set]" : new_username; break;
                         // CHANGED: Show actual passwords instead of ******
                         case 2: setting_value = root_password.empty() ? "[Not Set]" : root_password; break;
@@ -195,8 +199,7 @@ private:
     // FIXED: Function to display current settings on main menu - CHANGED to show actual passwords
     void display_current_settings() {
         std::cout << COLOR_YELLOW << "\nCurrent Settings:" << COLOR_RESET << std::endl;
-        std::cout << COLOR_CYAN << "Installation Path: " << COLOR_RESET
-        << (target_folder.empty() ? "[Not Set]" : target_folder) << std::endl;
+        std::cout << COLOR_CYAN << "Installation Path: " << COLOR_RESET << getTargetFolder() << std::endl;
         std::cout << COLOR_CYAN << "Username: " << COLOR_RESET
         << (new_username.empty() ? "[Not Set]" : new_username) << std::endl;
         // CHANGED: Show actual passwords instead of ******
@@ -218,6 +221,7 @@ private:
         std::cout << COLOR_CYAN << "Creating squashfs image..." << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
+        std::string target_folder = getTargetFolder();
 
         // NEW: Clean pacman cache before creating squashfs
         std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
@@ -341,17 +345,10 @@ private:
         std::cout << COLOR_CYAN << "Executing: " << xorriso_cmd << COLOR_RESET << std::endl;
 
         if (execute_command(xorriso_cmd) == 0) {
-            std::cout << COLOR_GREEN << "ISO image created successfully: " << distro_name << ".iso" << COLOR_RESET << std::endl;
+            std::cout << COLOR_GREEN << "ISO image created successfully: " << distro_name + ".iso" << COLOR_RESET << std::endl;
         } else {
             std::cout << COLOR_RED << "Failed to create ISO image!" << COLOR_RESET << std::endl;
         }
-    }
-
-    // NEW: Set installation path
-    void set_installation_path() {
-        std::string base_path = get_input("Enter base installation path (e.g., /mnt): ");
-        target_folder = base_path + "/claudemods-distro";
-        // REMOVED the green confirmation message
     }
 
     // NEW: Set username
@@ -428,10 +425,6 @@ private:
 
     // NEW: Check if all required settings are configured
     bool check_settings_configured() {
-        if (target_folder.empty()) {
-            std::cout << COLOR_RED << "Error: Installation path not set!" << COLOR_RESET << std::endl;
-            return false;
-        }
         if (new_username.empty()) {
             std::cout << COLOR_RED << "Error: Username not set!" << COLOR_RESET << std::endl;
             return false;
@@ -456,6 +449,7 @@ private:
     }
 
     void mount_system_dirs() {
+        std::string target_folder = getTargetFolder();
         execute_command("sudo mkdir -p " + target_folder + "/dev");
         execute_command("sudo mkdir -p " + target_folder + "/dev/pts");
         execute_command("sudo mkdir -p " + target_folder + "/proc");
@@ -471,6 +465,7 @@ private:
     }
 
     void unmount_system_dirs() {
+        std::string target_folder = getTargetFolder();
         execute_command("sudo umount " + target_folder + "/dev/pts");
         execute_command("sudo umount " + target_folder + "/dev");
         execute_command("sudo umount " + target_folder + "/proc");
@@ -479,6 +474,7 @@ private:
     }
 
     void create_user() {
+        std::string target_folder = getTargetFolder();
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"useradd -m -G wheel -s /bin/bash " + new_username + "\"");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"echo 'root:" + root_password + "' | chpasswd\"");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"echo '" + new_username + ":" + user_password + "' | chpasswd\"");
@@ -486,6 +482,7 @@ private:
     }
 
     void apply_timezone_keyboard_settings() {
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Setting timezone to: " << timezone << COLOR_RESET << std::endl;
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"ln -sf /usr/share/zoneinfo/" + timezone + " /etc/localtime\"");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"hwclock --systohc\"");
@@ -506,6 +503,7 @@ private:
         }
 
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -672,6 +670,7 @@ private:
         }
 
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal Dev..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -838,6 +837,7 @@ private:
         }
 
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1004,6 +1004,7 @@ private:
         }
 
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1170,6 +1171,7 @@ private:
         }
 
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1336,6 +1338,7 @@ private:
         }
 
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal Dev..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1502,6 +1505,7 @@ private:
         }
 
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Full..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1668,6 +1672,7 @@ private:
         }
 
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
+        std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -1839,10 +1844,11 @@ private:
             "Back to Main Menu"
         };
 
+        int selected = 0;
         while (true) {
-            int choice = show_menu(distro_options, "Select Distribution to Install");
+            selected = show_menu(distro_options, "Select Distribution to Install", selected);
 
-            switch(choice) {
+            switch(selected) {
                 case 0:
                     install_spitfire_ckge_minimal();
                     break;
@@ -1878,7 +1884,7 @@ private:
 
     void show_main_menu() {
         std::vector<std::string> main_options = {
-            "Set Installation Path",
+            "Installation Path: " + getTargetFolder(),
             "Set Username",
             "Set Root Password",
             "Set User Password",
@@ -1888,16 +1894,20 @@ private:
             "Exit"
         };
 
+        int selected = 0;
         while (true) {
             system("clear");
             display_header();
             display_current_settings(); // This will now show settings on main menu
 
-            int choice = show_menu(main_options, "claudemods distribution iso creator");
+            // Update the first option to always show current path
+            main_options[0] = "Installation Path: " + getTargetFolder();
 
-            switch(choice) {
+            selected = show_menu(main_options, "claudemods distribution iso creator", selected);
+
+            switch(selected) {
                 case 0:
-                    set_installation_path();
+                    // Installation path is fixed, no action needed
                     break;
                 case 1:
                     set_username();
