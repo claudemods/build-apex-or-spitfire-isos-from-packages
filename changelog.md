@@ -6,7 +6,7 @@ lots of testing has gone into making this a thing its 95% and in theory should j
 
 ive added all commands that need to be a thing the last time i tested the whole system installed fine to the folder i set 
 
-but this was without squashfs cretion commands iso creation commands and extra calamares commands that ive added 
+but this was without squashfs creation commands iso creation commands and extra calamares commands that ive added 
 
 their is 1 file i need to add for calamares e.g mount.conf for btrfs level 22 compression and i will be changing my iso theme for the isos
 
