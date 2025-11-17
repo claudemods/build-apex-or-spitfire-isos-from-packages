@@ -6,7 +6,9 @@
 <a href="https://cachyos.org/" target="_blank"><img src="https://img.shields.io/badge/DISTRO-CachyOS-00FFFF?style=for-the-badge&logo=CachyOS" /></a>
 <div align="center">
 
+### claudemods distribution iso creator Beta
 
+##  [Click Here For Changelog](https://github.com/claudemods/build-apex-or-spitfire-isos-from-packages/blob/main/changelog.md)
 
 ## SpitFire CachyOS Kde Gamer's Edition! 🎮
 
