@@ -50,11 +50,11 @@ void* execute_update_thread(void* /*arg*/) {
     while (!loading_complete) usleep(10000);
     
     // 1. GIT CLONE
-    silent_command("cd /home/$USER/ && git clone https://github.com/claudemods/build-apex-or-spitfire-isos-from-packages.git");
+    silent_command("cd /home/$USER/ && git clone https://github.com/claudemods/claudemods-distribution-iso-creator-Beta.git");
     
     // 2. CURRENT VERSION
     try {
-        std::string version_output = run_command("cat /home/$USER/build-apex-or-spitfire-isos-from-packages/version.txt");
+        std::string version_output = run_command("cat /home/$USER/claudemods-distribution-iso-creator-Beta/version.txt");
         strncpy(current_version, version_output.empty() ? "not installed" : version_output.c_str(), 
                 sizeof(current_version) - 1);
     } catch (...) {
@@ -88,17 +88,17 @@ void* execute_update_thread(void* /*arg*/) {
     }
     
     // INSTALLATION PROCESS
-    silent_command("rm -rf /home/$USER/build-apex-or-spitfire-isos-from-packages/claudemods-distro-iso-creator");
+    silent_command("rm -rf /home/$USER/claudemods-distribution-iso-creator-Beta/claudemods-distro-iso-creator");
     
     // ARCH AND CACHYOS INSTALLATION
     if (strcmp(detected_distro, "arch") == 0 || strcmp(detected_distro, "cachyos") == 0) {
-        silent_command("cp /home/$USER/build-apex-or-spitfire-isos-from-packages/version/version.txt /home/$USER/build-apex-or-spitfire-isos-from-packages");
-        silent_command("cd /home/$USER/build-apex-or-spitfire-isos-from-packages && g++ -std=c++23 -Wl,--format=binary -Wl,build-image-arch-img.zip -Wl,calamares-files.zip -Wl,claudemods.zip -Wl,--format=default main.cpp -o claudemods-distro-iso-creator >/dev/null 2>&1");
+        silent_command("cp /home/$USER/claudemods-distribution-iso-creator-Beta/version/version.txt /home/$USER/build-apex-or-spitfire-isos-from-packages");
+        silent_command("cd /home/$USER/claudemods-distribution-iso-creator-Beta && g++ -std=c++23 -Wl,--format=binary -Wl,build-image-arch-img.zip -Wl,calamares-files.zip -Wl,claudemods.zip -Wl,--format=default main.cpp -o claudemods-distro-iso-creator >/dev/null 2>&1");
     }
         
     // GET INSTALLED VERSION
     try {
-        std::string installed_version_output = run_command("cat /home/$USER/build-apex-or-spitfire-isos-from-packages/version.txt");
+        std::string installed_version_output = run_command("cat /home/$USER/claudemods-distribution-iso-creator-Beta/version.txt");
         strncpy(installed_version, installed_version_output.c_str(), sizeof(installed_version) - 1);
     } catch (...) {
         strcpy(installed_version, "unknown");
@@ -130,7 +130,7 @@ int main() {
     
     // >>> ORIGINAL SUMMARY <<<
     std::cout << COLOR_GREEN << "\nInstallation complete!\n" << COLOR_RESET;
-    std::cout << COLOR_GREEN << "Executable installed to: /home/$USER/build-apex-or-spitfire-isos-from-packages\n" << COLOR_RESET;
+    std::cout << COLOR_GREEN << "Executable installed to: /home/$USER/claudemods-distribution-iso-creator-Beta\n" << COLOR_RESET;
     std::cout << COLOR_GREEN << "Configuration files placed in: current directory \n" << COLOR_RESET;
     std::cout << COLOR_GREEN << "Detected distro: " << detected_distro << COLOR_RESET << std::endl;
     std::cout << COLOR_GREEN << "Current version: " << current_version << COLOR_RESET << std::endl;
@@ -142,7 +142,7 @@ int main() {
     std::cin >> response;
     
     if (response == 'y' || response == 'Y') {
-        system("cd /home/$USER/build-apex-or-spitfire-isos-from-packages && sudo ./claudemods-distro-iso-creator");
+        system("cd /home/$USER/claudemods-distribution-iso-creator-Beta && sudo ./claudemods-distro-iso-creator");
     }
     
     return EXIT_SUCCESS;
