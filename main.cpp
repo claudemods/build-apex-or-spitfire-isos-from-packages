@@ -244,13 +244,50 @@ private:
                 std::cout << COLOR_RED << "Failed to delete target folder: " << target_folder << COLOR_RESET << std::endl;
             }
 
-            // NEW: Copy vmlinuz from current system's /boot to build directory
-            std::cout << COLOR_CYAN << "Copying kernel image..." << COLOR_RESET << std::endl;
-            std::string copy_kernel_cmd = "sudo cp /boot/vmlinuz* " + currentDir + "/build-image-arch-img/boot/vmlinuz-x86_64";
-            if (execute_command(copy_kernel_cmd) == 0) {
-                std::cout << COLOR_GREEN << "Kernel image copied successfully!" << COLOR_RESET << std::endl;
+            // Copy kernel image with user selection
+            std::cout << COLOR_CYAN << "Searching for kernel images..." << COLOR_RESET << std::endl;
+
+            // Get list of vmlinuz files
+            std::vector<std::string> kernel_files;
+            std::string find_cmd = "find /boot -name 'vmlinuz-*' -type f 2>/dev/null | sort";
+            FILE* pipe = popen(find_cmd.c_str(), "r");
+            if (pipe) {
+                char buffer[256];
+                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                    std::string file_path = buffer;
+                    file_path.erase(std::remove(file_path.begin(), file_path.end(), '\n'), file_path.end());
+                    if (!file_path.empty()) kernel_files.push_back(file_path);
+                }
+                pclose(pipe);
+            }
+
+            if (kernel_files.empty()) {
+                std::cout << COLOR_RED << "No kernel images found!" << COLOR_RESET << std::endl;
             } else {
-                std::cout << COLOR_RED << "Failed to copy kernel image!" << COLOR_RESET << std::endl;
+                // Show available kernels
+                std::cout << COLOR_CYAN << "Available kernels:" << COLOR_RESET << std::endl;
+                for (size_t i = 0; i < kernel_files.size(); i++) {
+                    std::cout << "[" << i + 1 << "] " << kernel_files[i] << std::endl;
+                }
+
+                // Get selection
+                std::cout << COLOR_CYAN << "Select kernel (1-" << kernel_files.size() << "): " << COLOR_RESET;
+                std::string input;
+                std::getline(std::cin, input);
+
+                try {
+                    int choice = std::stoi(input);
+                    if (choice >= 1 && choice <= kernel_files.size()) {
+                        std::string copy_cmd = "sudo cp " + kernel_files[choice - 1] + " " + currentDir + "/build-image-arch-img/boot/vmlinuz-x86_64";
+                        if (execute_command(copy_cmd) == 0) {
+                            std::cout << COLOR_GREEN << "Kernel copied successfully!" << COLOR_RESET << std::endl;
+                        } else {
+                            std::cout << COLOR_RED << "Failed to copy kernel!" << COLOR_RESET << std::endl;
+                        }
+                    }
+                } catch (...) {
+                    std::cout << COLOR_RED << "Invalid selection!" << COLOR_RESET << std::endl;
+                }
             }
 
             // NEW: Generate initramfs
@@ -593,10 +630,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -759,10 +794,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -925,10 +958,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -1091,10 +1122,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -1257,10 +1286,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -1423,10 +1450,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -1589,10 +1614,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -1755,10 +1778,8 @@ private:
 
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
-        execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar.zst " + target_folder);
 
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
