@@ -36,6 +36,7 @@ private:
     std::string user_password;
     std::string timezone;
     std::string keyboard_layout;
+    std::string current_distro_name; // Store the current distro name for ISO
 
     // Terminal control for arrow keys
     struct termios oldt, newt;
@@ -178,11 +179,13 @@ private:
         << (timezone.empty() ? "[Not Set]" : timezone) << std::endl;
         std::cout << COLOR_CYAN << "Keyboard Layout: " << COLOR_RESET
         << (keyboard_layout.empty() ? "[Not Set]" : keyboard_layout) << std::endl;
+        std::cout << COLOR_CYAN << "Current Distro: " << COLOR_RESET
+        << (current_distro_name.empty() ? "[Not Set]" : current_distro_name) << std::endl;
         std::cout << std::endl;
     }
 
     // UPDATED: Function to create squashfs image after installation with additional steps
-    void create_squashfs_image() {
+    void create_squashfs_image(const std::string& distro_name) {
         std::cout << COLOR_CYAN << "Creating squashfs image..." << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
@@ -207,6 +210,9 @@ private:
             std::string initramfs_cmd = "cd " + currentDir + "/build-image-arch-img && sudo mkinitcpio -c mkinitcpio.conf -g " + currentDir + "/build-image-arch-img/boot/initramfs-x86_64.img";
             if (execute_command(initramfs_cmd) == 0) {
                 std::cout << COLOR_GREEN << "Initramfs generated successfully!" << COLOR_RESET << std::endl;
+
+                // NEW: Create ISO with XORRISO after initramfs generation
+                create_iso_image(distro_name);
             } else {
                 std::cout << COLOR_RED << "Failed to generate initramfs!" << COLOR_RESET << std::endl;
             }
@@ -216,29 +222,69 @@ private:
         }
     }
 
+    // NEW: Create ISO image with XORRISO
+    void create_iso_image(const std::string& distro_name) {
+        std::cout << COLOR_CYAN << "Creating ISO image with XORRISO..." << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
+        std::string currentDIR = currentDir;
+
+        // Build the XORRISO command with the distro name as ISO filename
+        std::string xorriso_cmd = "sudo xorriso -as mkisofs "
+        "--modification-date=\"$(date +%Y%m%d%H%M%S00)\" "
+        "--protective-msdos-label "
+        "-volid \"2025\" "
+        "-appid \"claudemods Linux Live/Rescue CD\" "
+        "-publisher \"claudemods claudemods101@gmail.com >\" "
+        "-preparer \"Prepared by user\" "
+        "-r -graft-points -no-pad "
+        "--sort-weight 0 / "
+        "--sort-weight 1 /boot "
+        "--grub2-mbr " + currentDir + "/build-image-arch-img/boot/grub/i386-pc/boot_hybrid.img "
+        "-partition_offset 16 "
+        "-b boot/grub/i386-pc/eltorito.img "
+        "-c boot.catalog "
+        "-no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info "
+        "-eltorito-alt-boot "
+        "-append_partition 2 0xef " + currentDir + "/build-image-arch-img/boot/efi.img "
+        "-e --interval:appended_partition_2:all:: "
+        "-no-emul-boot "
+        "-iso-level 3 "
+        "-o \"" + currentDir + "/build-image-arch-img/" + distro_name + ".iso\" " +
+        currentDir + "/build-image-arch-img";
+
+        std::cout << COLOR_CYAN << "Executing: " << xorriso_cmd << COLOR_RESET << std::endl;
+
+        if (execute_command(xorriso_cmd) == 0) {
+            std::cout << COLOR_GREEN << "ISO image created successfully: " << distro_name << ".iso" << COLOR_RESET << std::endl;
+        } else {
+            std::cout << COLOR_RED << "Failed to create ISO image!" << COLOR_RESET << std::endl;
+        }
+    }
+
     // NEW: Set installation path
     void set_installation_path() {
         std::string base_path = get_input("Enter base installation path (e.g., /mnt): ");
         target_folder = base_path + "/claudemods-distro";
-        std::cout << COLOR_GREEN << "Installation path set to: " << target_folder << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Set username
     void set_username() {
         new_username = get_input("Enter username: ");
-        std::cout << COLOR_GREEN << "Username set to: " << new_username << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Set root password
     void set_root_password() {
         root_password = get_input("Enter root password: ");
-        std::cout << COLOR_GREEN << "Root password set." << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Set user password
     void set_user_password() {
         user_password = get_input("Enter user password: ");
-        std::cout << COLOR_GREEN << "User password set." << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Set timezone
@@ -265,7 +311,7 @@ private:
             case 6: timezone = "Asia/Tokyo"; break;
             case 7: timezone = get_input("Enter timezone (e.g., Europe/Berlin): "); break;
         }
-        std::cout << COLOR_GREEN << "Timezone set to: " << timezone << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Set keyboard layout
@@ -292,7 +338,7 @@ private:
             case 6: keyboard_layout = "jp"; break;
             case 7: keyboard_layout = get_input("Enter keyboard layout (e.g., br, ru, pt): "); break;
         }
-        std::cout << COLOR_GREEN << "Keyboard layout set to: " << keyboard_layout << COLOR_RESET << std::endl;
+        // REMOVED the green confirmation message
     }
 
     // NEW: Check if all required settings are configured
@@ -368,6 +414,7 @@ private:
 
     // FIXED: Create target directory first and ensure pacstrap works
     void install_spitfire_ckge_minimal() {
+        current_distro_name = "Spitfire-CKGE-Minimal";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -500,11 +547,12 @@ private:
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Spitfire-CKGE-Minimal");
     }
 
     // SPITFIRE CKGE MINIMAL DEV - FIXED
     void install_spitfire_ckge_minimal_dev() {
+        current_distro_name = "Spitfire-CKGE-Minimal-Dev";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -637,11 +685,12 @@ private:
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Spitfire-CKGE-Minimal-Dev");
     }
 
     // SPITFIRE CKGE FULL - FIXED
     void install_spitfire_ckge_full() {
+        current_distro_name = "Spitfire-CKGE-Full";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -774,11 +823,12 @@ private:
         std::cout << COLOR_GREEN << "Spitfire CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Spitfire-CKGE-Full");
     }
 
     // SPITFIRE CKGE FULL DEV - FIXED
     void install_spitfire_ckge_full_dev() {
+        current_distro_name = "Spitfire-CKGE-Full-Dev";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -911,11 +961,12 @@ private:
         std::cout << COLOR_GREEN << "Spitfire CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Spitfire-CKGE-Full-Dev");
     }
 
     // APEX CKGE MINIMAL - FIXED
     void install_apex_ckge_minimal() {
+        current_distro_name = "Apex-CKGE-Minimal";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -1048,11 +1099,12 @@ private:
         std::cout << COLOR_GREEN << "Apex CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Apex-CKGE-Minimal");
     }
 
     // APEX CKGE MINIMAL DEV - FIXED
     void install_apex_ckge_minimal_dev() {
+        current_distro_name = "Apex-CKGE-Minimal-Dev";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -1185,11 +1237,12 @@ private:
         std::cout << COLOR_GREEN << "Apex CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Apex-CKGE-Minimal-Dev");
     }
 
     // APEX CKGE FULL - FIXED
     void install_apex_ckge_full() {
+        current_distro_name = "Apex-CKGE-Full";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -1322,11 +1375,12 @@ private:
         std::cout << COLOR_GREEN << "Apex CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Apex-CKGE-Full");
     }
 
     // APEX CKGE FULL DEV - FIXED
     void install_apex_ckge_full_dev() {
+        current_distro_name = "Apex-CKGE-Full-Dev";
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
@@ -1459,7 +1513,7 @@ private:
         std::cout << COLOR_GREEN << "Apex CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE AFTER INSTALLATION
-        create_squashfs_image();
+        create_squashfs_image("Apex-CKGE-Full-Dev");
     }
 
     // NEW: Show distro selection menu
