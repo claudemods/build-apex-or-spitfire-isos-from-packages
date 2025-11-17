@@ -216,9 +216,9 @@ private:
     // UPDATED: Function to create squashfs image after installation with additional steps
     void create_squashfs_image(const std::string& distro_name) {
         std::cout << COLOR_CYAN << "Creating squashfs image..." << COLOR_RESET << std::endl;
-        
+
         std::string currentDir = getCurrentDir();
-        
+
         // NEW: Clean pacman cache before creating squashfs
         std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
         std::string cache_clean_cmd = "sudo rm -rf " + target_folder + "/var/cache/pacman/pkg/*";
@@ -227,7 +227,7 @@ private:
         } else {
             std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
         }
-        
+
         std::string squashfs_cmd = "sudo mksquashfs " + target_folder + " " + currentDir + "/build-image-arch-img/LiveOS/rootfs.img -noappend -comp xz -b 256K -Xbcj x86";
 
         std::cout << COLOR_CYAN << "Executing: " << squashfs_cmd << COLOR_RESET << std::endl;
@@ -335,8 +335,8 @@ private:
         "-e --interval:appended_partition_2:all:: "
         "-no-emul-boot "
         "-iso-level 3 "
-        "-o \"" + currentDir + "/build-image-arch-img/" + distro_name + ".iso\" " +
-        currentDir + "/";
+        "-o \"" + currentDir + "/" + distro_name + ".iso\" " +
+        currentDir + "/build-image-arch-img/";
 
         std::cout << COLOR_CYAN << "Executing: " << xorriso_cmd << COLOR_RESET << std::endl;
 
