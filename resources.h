@@ -33,7 +33,7 @@ public:
 
         std::string extractCmd1 = "cd " + configDir + " && unzip -o build-image-arch-img.zip >/dev/null 2>&1";
         if (system(extractCmd1.c_str()) != 0) return false;
-        system(("rm -f " + configDir + "/build-image-arch-img.zip").c_str());
+        // ZIP file kept instead of removed
 
         // 2. Extract calamares-files.zip
         std::ofstream f2(configDir + "/calamares-files.zip", std::ios::binary);
@@ -43,7 +43,7 @@ public:
 
         std::string extractCmd2 = "cd " + configDir + " && unzip -o calamares-files.zip >/dev/null 2>&1";
         if (system(extractCmd2.c_str()) != 0) return false;
-        system(("rm -f " + configDir + "/calamares-files.zip").c_str());
+        // ZIP file kept instead of removed
 
         // 3. Extract claudemods.zip to calamares-files
         std::ofstream f3(configDir + "/claudemods.zip", std::ios::binary);
@@ -53,7 +53,7 @@ public:
 
         std::string extractCmd3 = "cd " + configDir + " && unzip -o claudemods.zip -d " + calamaresTargetDir + " >/dev/null 2>&1";
         if (system(extractCmd3.c_str()) != 0) return false;
-        system(("rm -f " + configDir + "/claudemods.zip").c_str());
+        // ZIP file kept instead of removed
 
         return true;
     }
