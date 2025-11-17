@@ -2,7 +2,7 @@
 Comment[en_GB]=
 Comment=
 Comment[en_US]=
-Exec=konsole -e cmiimg
+Exec=cd /opt/rsync-installer && konsole -e ./rsync.sh
 GenericName[en_GB]=claudemods rsync ext4 installer
 GenericName=claudemods rsync ext4 installer
 GenericName[en_US]=claudemods rsync ext4 installer
