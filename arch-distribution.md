@@ -1,15 +1,15 @@
 claudemods distribution iso creator Beta (arch option needs building)
 
 iso creating Options
--🐧 Vanilla Arch Linux
-- 🖥️ Vanilla Arch TTY GRUB
-🎯 Vanilla Arch GNOME
-🌟 Vanilla Arch KDE Plasma
-🐦 Vanilla Arch XFCE
-🔧 Vanilla Arch LXQt
-🍬 Vanilla Arch Cinnamon
-🍃 Vanilla Arch MATE
-🪶 Vanilla Arch Budgie
-🔲 Vanilla Arch i3 (tiling WM)
-🌊 Vanilla Arch Sway (Wayland tiling)
-✨ Vanilla Arch Hyprland
+### 🐧 Vanilla Arch Linux
+1. 🖥️ Vanilla Arch TTY GRUB
+2. 🎯 Vanilla Arch GNOME
+3. 🌟 Vanilla Arch KDE Plasma
+4. 🐦 Vanilla Arch XFCE
+5. 🔧 Vanilla Arch LXQt
+6. 🍬 Vanilla Arch Cinnamon
+7. 🍃 Vanilla Arch MATE
+8. 🪶 Vanilla Arch Budgie
+9. 🔲 Vanilla Arch i3 (tiling WM)
+10. 🌊 Vanilla Arch Sway (Wayland tiling)
+11. ✨ Vanilla Arch Hyprland
