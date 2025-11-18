@@ -38,6 +38,7 @@ private:
     std::string current_distro_name; // Store the current distro name for ISO
     std::string selected_kernel;     // ADDED: Missing member variable
     std::string current_desktop_name; // ADDED: Missing member variable
+    std::string extra_packages;      // NEW: Store extra packages
 
     // Terminal control for arrow keys
     struct termios oldt, newt;
@@ -174,6 +175,7 @@ private:
                         case 5: setting_value = keyboard_layout.empty() ? "[Not Set]" : keyboard_layout; break;
                         case 6: setting_value = selected_kernel.empty() ? "[Not Set]" : selected_kernel; break;
                         case 7: setting_value = current_desktop_name.empty() ? "[Not Set]" : current_desktop_name; break;
+                        case 8: setting_value = extra_packages.empty() ? "[Not Set]" : extra_packages; break; // NEW: Extra packages display
                         default: setting_value = ""; break;
                     }
 
@@ -241,6 +243,8 @@ private:
         << (selected_kernel.empty() ? "[Not Set]" : selected_kernel) << std::endl;
         std::cout << COLOR_CYAN << "Desktop Environment: " << COLOR_RESET
         << (current_desktop_name.empty() ? "[Not Set]" : current_desktop_name) << std::endl;
+        std::cout << COLOR_CYAN << "Extra Packages: " << COLOR_RESET
+        << (extra_packages.empty() ? "[Not Set]" : extra_packages) << std::endl; // NEW: Extra packages display
         std::cout << std::endl;
     }
 
@@ -432,6 +436,13 @@ private:
         }
     }
 
+    // NEW: Set extra packages
+    void set_extra_packages() {
+        std::cout << COLOR_CYAN << "Enter additional packages to install (space-separated):" << COLOR_RESET << std::endl;
+        std::cout << COLOR_YELLOW << "Examples: vim git htop curl wget firefox" << COLOR_RESET << std::endl;
+        extra_packages = get_input("Extra packages: ");
+    }
+
     // Check if all required settings are configured
     bool check_settings_configured() {
         if (new_username.empty()) {
@@ -456,6 +467,10 @@ private:
         }
         if (selected_kernel.empty()) {
             std::cout << COLOR_RED << "Error: Kernel not selected!" << COLOR_RESET << std::endl;
+            return false;
+        }
+        if (current_desktop_name.empty()) {
+            std::cout << COLOR_RED << "Error: Desktop environment not selected!" << COLOR_RESET << std::endl;
             return false;
         }
         return true;
@@ -507,15 +522,46 @@ private:
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"locale-gen\"");
     }
 
-    // ARCH DESKTOP INSTALLATION FUNCTIONS
-
-    void install_arch_tty_grub() {
-        current_desktop_name = "Arch-TTY-Grub";
+    // NEW: Start installation function
+    void start_installation() {
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
         }
 
+        std::cout << COLOR_CYAN << "Starting installation with selected desktop: " << current_desktop_name << COLOR_RESET << std::endl;
+        
+        // Call the appropriate installation function based on current_desktop_name
+        if (current_desktop_name == "Arch-TTY-Grub") {
+            install_arch_tty_grub();
+        } else if (current_desktop_name == "Arch-GNOME") {
+            install_gnome_desktop();
+        } else if (current_desktop_name == "Arch-KDE-Plasma") {
+            install_kde_plasma();
+        } else if (current_desktop_name == "Arch-XFCE") {
+            install_xfce_desktop();
+        } else if (current_desktop_name == "Arch-LXQt") {
+            install_lxqt_desktop();
+        } else if (current_desktop_name == "Arch-Cinnamon") {
+            install_cinnamon_desktop();
+        } else if (current_desktop_name == "Arch-MATE") {
+            install_mate_desktop();
+        } else if (current_desktop_name == "Arch-Budgie") {
+            install_budgie_desktop();
+        } else if (current_desktop_name == "Arch-i3") {
+            install_i3_wm();
+        } else if (current_desktop_name == "Arch-Sway") {
+            install_sway_wm();
+        } else if (current_desktop_name == "Arch-Hyprland") {
+            install_hyprland();
+        } else {
+            std::cout << COLOR_RED << "Unknown desktop environment: " << current_desktop_name << COLOR_RESET << std::endl;
+        }
+    }
+
+    // ARCH DESKTOP INSTALLATION FUNCTIONS
+
+    void install_arch_tty_grub() {
         std::cout << COLOR_CYAN << "Installing Arch TTY Grub..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Arch TTY Grub installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -551,9 +597,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base " + selected_kernel + " linux-firmware grub efibootmgr os-prober sudo arch-install-scripts mkinitcpio vim nano bash-completion systemd networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         // VERIFY PACSTRAP SUCCESS
@@ -618,12 +667,6 @@ private:
     }
 
     void install_gnome_desktop() {
-        current_desktop_name = "Arch-GNOME";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch GNOME Desktop..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting GNOME installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -643,9 +686,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL GNOME WITH PACSTRAP
+        // INSTALL GNOME WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing GNOME Desktop with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base gnome gnome-extra gdm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -703,12 +749,6 @@ private:
     }
 
     void install_kde_plasma() {
-        current_desktop_name = "Arch-KDE-Plasma";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch KDE Plasma..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting KDE Plasma installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -728,9 +768,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL KDE WITH PACSTRAP
+        // INSTALL KDE WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing KDE Plasma with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base plasma sddm dolphin konsole kate grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -788,12 +831,6 @@ private:
     }
 
     void install_xfce_desktop() {
-        current_desktop_name = "Arch-XFCE";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch XFCE..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting XFCE installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -813,9 +850,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL XFCE WITH PACSTRAP
+        // INSTALL XFCE WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing XFCE with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base xfce4 xfce4-goodies lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -873,12 +913,6 @@ private:
     }
 
     void install_lxqt_desktop() {
-        current_desktop_name = "Arch-LXQt";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch LXQt..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting LXQt installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -898,9 +932,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL LXQT WITH PACSTRAP
+        // INSTALL LXQT WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing LXQt with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base lxqt sddm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -958,12 +995,6 @@ private:
     }
 
     void install_cinnamon_desktop() {
-        current_desktop_name = "Arch-Cinnamon";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch Cinnamon..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Cinnamon installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -983,9 +1014,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL CINNAMON WITH PACSTRAP
+        // INSTALL CINNAMON WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing Cinnamon with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base cinnamon lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1043,12 +1077,6 @@ private:
     }
 
     void install_mate_desktop() {
-        current_desktop_name = "Arch-MATE";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch MATE..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting MATE installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1068,9 +1096,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL MATE WITH PACSTRAP
+        // INSTALL MATE WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing MATE with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base mate mate-extra lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1128,12 +1159,6 @@ private:
     }
 
     void install_budgie_desktop() {
-        current_desktop_name = "Arch-Budgie";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch Budgie..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Budgie installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1153,9 +1178,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL BUDGIE WITH PACSTRAP
+        // INSTALL BUDGIE WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing Budgie with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base budgie-desktop lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1213,12 +1241,6 @@ private:
     }
 
     void install_i3_wm() {
-        current_desktop_name = "Arch-i3";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch i3 (tiling WM)..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting i3 installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1238,9 +1260,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL i3 WITH PACSTRAP
+        // INSTALL i3 WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing i3 with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base i3-wm i3status i3lock dmenu lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1298,12 +1323,6 @@ private:
     }
 
     void install_sway_wm() {
-        current_desktop_name = "Arch-Sway";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_CYAN << "Installing Arch Sway (Wayland tiling)..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Sway installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1323,9 +1342,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL SWAY WITH PACSTRAP
+        // INSTALL SWAY WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing Sway with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base sway swaybg waybar wofi lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1383,12 +1405,6 @@ private:
     }
 
     void install_hyprland() {
-        current_desktop_name = "Arch-Hyprland";
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_PURPLE << "Installing Arch Hyprland (Modern Wayland Compositor)..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Hyprland installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1408,9 +1424,12 @@ private:
 
         execute_command("sudo pacman -Sy");
 
-        // INSTALL HYPRLAND WITH PACSTRAP
+        // INSTALL HYPRLAND WITH PACSTRAP - UPDATED: Include extra packages
         std::cout << COLOR_CYAN << "Installing Hyprland with pacstrap..." << COLOR_RESET << std::endl;
         std::string packages = "base hyprland waybar rofi wl-clipboard sddm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
         execute_command("sudo pacstrap " + target_folder + " " + packages);
 
         execute_command("sudo mkdir -p " + target_folder + "/boot");
@@ -1422,8 +1441,6 @@ private:
 
         apply_timezone_keyboard_settings();
         create_user();
-
-
 
         unmount_system_dirs();
         std::cout << COLOR_PURPLE << "Hyprland installed! Note: You may need to configure ~/.config/hypr/hyprland.conf" << COLOR_RESET << std::endl;
@@ -1469,7 +1486,7 @@ private:
         create_squashfs_image("Arch-Hyprland");
     }
 
-    // Show desktop selection menu with ALL options
+    // Show desktop selection menu with ALL options - MODIFIED: Only set current_desktop_name, don't install
     void show_desktop_selection() {
         std::vector<std::string> desktop_options = {
             "Arch TTY Grub (Terminal Only)",
@@ -1492,44 +1509,52 @@ private:
 
             switch(selected) {
                 case 0:
-                    install_arch_tty_grub();
-                    break;
+                    current_desktop_name = "Arch-TTY-Grub";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: Arch TTY Grub" << COLOR_RESET << std::endl;
+                    return;
                 case 1:
-                    install_gnome_desktop();
-                    break;
+                    current_desktop_name = "Arch-GNOME";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: GNOME Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 2:
-                    install_kde_plasma();
-                    break;
+                    current_desktop_name = "Arch-KDE-Plasma";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: KDE Plasma" << COLOR_RESET << std::endl;
+                    return;
                 case 3:
-                    install_xfce_desktop();
-                    break;
+                    current_desktop_name = "Arch-XFCE";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: XFCE Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 4:
-                    install_lxqt_desktop();
-                    break;
+                    current_desktop_name = "Arch-LXQt";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: LXQt Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 5:
-                    install_cinnamon_desktop();
-                    break;
+                    current_desktop_name = "Arch-Cinnamon";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: Cinnamon Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 6:
-                    install_mate_desktop();
-                    break;
+                    current_desktop_name = "Arch-MATE";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: MATE Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 7:
-                    install_budgie_desktop();
-                    break;
+                    current_desktop_name = "Arch-Budgie";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: Budgie Desktop" << COLOR_RESET << std::endl;
+                    return;
                 case 8:
-                    install_i3_wm();
-                    break;
+                    current_desktop_name = "Arch-i3";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: i3 (tiling WM)" << COLOR_RESET << std::endl;
+                    return;
                 case 9:
-                    install_sway_wm();
-                    break;
+                    current_desktop_name = "Arch-Sway";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: Sway (Wayland tiling)" << COLOR_RESET << std::endl;
+                    return;
                 case 10:
-                    install_hyprland();
-                    break;
+                    current_desktop_name = "Arch-Hyprland";
+                    std::cout << COLOR_GREEN << "Desktop environment set to: Hyprland (Wayland)" << COLOR_RESET << std::endl;
+                    return;
                 case 11:
                     return;
             }
-
-            std::cout << COLOR_CYAN << "Press Enter to continue..." << COLOR_RESET;
-            std::cin.get();
         }
     }
 
@@ -1543,6 +1568,8 @@ private:
             "Set Keyboard Layout",
             "Set Kernel",
             "Select Desktop Environment",
+            "Install Extra Packages",  // NEW: Extra packages option
+            "Start Installation",      // NEW: Start installation option
             "Exit"
         };
 
@@ -1555,7 +1582,7 @@ private:
             // Update the first option to always show current path
             main_options[0] = "Installation Path: " + getTargetFolder();
 
-            selected = show_menu(main_options, "Arch Linux Desktop Installer", selected);
+            selected = show_menu(main_options, "claudemods distribution iso creator arch", selected);
 
             switch(selected) {
                 case 0:
@@ -1582,7 +1609,13 @@ private:
                 case 7:
                     show_desktop_selection();
                     break;
-                case 8:
+                case 8:  // NEW: Install Extra Packages
+                    set_extra_packages();
+                    break;
+                case 9:  // NEW: Start Installation
+                    start_installation();
+                    break;
+                case 10:
                     std::cout << COLOR_GREEN << "Exiting. Goodbye!" << COLOR_RESET << std::endl;
                     return;
             }
