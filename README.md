@@ -35,9 +35,9 @@ cachyos distribution iso creator Beta v1.0 17-11-2025 (cachyos distribution opti
 
 bash -c "$(curl -fsSL )"
 ```
-arch distribution iso creator Beta v1.0 17-11-2025 (arch distribution options not implemented yet!!)
+arch distribution iso creator Beta v1.0 17-11-2025 (arch distribution options being tested!!)
 
 ```bash
 
-bash -c "$(curl -fsSL )"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/claudemods/claudemods-distribution-iso-creator-Beta/refs/heads/main/archlinux/installer/patch.sh)"
 ```
