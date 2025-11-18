@@ -186,8 +186,8 @@ private:
                 }
 
                 // Truncate if too long to fit in the box
-                if (menu_line.length() > 56) {
-                    menu_line = menu_line.substr(0, 53) + "...";
+                if (menu_line.length() > 80) {
+                    menu_line = menu_line.substr(0, 77) + "...";
                 }
 
                 std::cout << std::left << std::setw(56) << menu_line;
