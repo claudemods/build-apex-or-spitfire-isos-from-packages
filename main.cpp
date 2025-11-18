@@ -54,9 +54,39 @@ private:
         return getCurrentDir() + "/claudemods-distro";
     }
 
-    // ADD ZIP EXTRACTION FUNCTION
+    // Check if directory exists
+    bool directoryExists(const std::string& path) {
+        struct stat info;
+        return (stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR));
+    }
+
+    // MODIFIED: Extract required files only if folders don't exist
     bool extractRequiredFiles() {
-        std::cout << COLOR_CYAN << "Extracting required files..." << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "Checking for required folders..." << COLOR_RESET << std::endl;
+
+        std::string currentDir = getCurrentDir();
+        bool buildImageExists = directoryExists(currentDir + "/build-image-arch-img");
+        bool calamaresFilesExists = directoryExists(currentDir + "/calamares-files");
+        bool workingHooksExists = directoryExists(currentDir + "/working-hooks-btrfs-ext4");
+
+        // Check if all required folders already exist
+        if (buildImageExists && calamaresFilesExists && workingHooksExists) {
+            std::cout << COLOR_GREEN << "All required folders already exist. Skipping extraction." << COLOR_RESET << std::endl;
+            return true;
+        }
+
+        std::cout << COLOR_CYAN << "Some folders missing, extracting required files..." << COLOR_RESET << std::endl;
+
+        // Extract only what's needed
+        if (!buildImageExists) {
+            std::cout << COLOR_CYAN << "Extracting build-image-arch-img..." << COLOR_RESET << std::endl;
+        }
+        if (!calamaresFilesExists) {
+            std::cout << COLOR_CYAN << "Extracting calamares files..." << COLOR_RESET << std::endl;
+        }
+        if (!workingHooksExists) {
+            std::cout << COLOR_CYAN << "Extracting working hooks..." << COLOR_RESET << std::endl;
+        }
 
         // Use your existing resource manager functions
         if (!ResourceManager::extractEmbeddedZip("")) {
@@ -152,8 +182,8 @@ private:
                 }
 
                 // Truncate if too long to fit in the box
-                if (menu_line.length() > 56) { // 60 - 4 for borders and spacing
-                    menu_line = menu_line.substr(0, 53) + "...";
+                if (menu_line.length() > 80) { // 60 - 4 for borders and spacing
+                    menu_line = menu_line.substr(0, 77) + "...";
                 }
 
                 std::cout << std::left << std::setw(56) << menu_line;
@@ -658,6 +688,12 @@ private:
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -828,6 +864,12 @@ private:
 
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -1000,6 +1042,12 @@ private:
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -1170,6 +1218,12 @@ private:
 
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Spitfire CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -1342,6 +1396,12 @@ private:
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Minimal installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -1513,6 +1573,12 @@ private:
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
 
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
+
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Minimal Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
 
@@ -1683,6 +1749,12 @@ private:
 
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+        // Delete the package files from target folder
+
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Full installation completed in: " << target_folder << COLOR_RESET << std::endl;
@@ -1854,6 +1926,12 @@ private:
 
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
+
+        // Delete the package files from target folder
+        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
+        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
+        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
 
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Apex CKGE Full Dev installation completed in: " << target_folder << COLOR_RESET << std::endl;
