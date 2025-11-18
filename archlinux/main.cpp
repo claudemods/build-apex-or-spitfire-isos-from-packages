@@ -36,6 +36,8 @@ private:
     std::string timezone;
     std::string keyboard_layout;
     std::string current_distro_name; // Store the current distro name for ISO
+    std::string selected_kernel;     // ADDED: Missing member variable
+    std::string current_desktop_name; // ADDED: Missing member variable
 
     // Terminal control for arrow keys
     struct termios oldt, newt;
@@ -111,7 +113,7 @@ private:
         std::cout << "██║░░██╗██║░░░░░██╔══██║██║░░░██║██║░░██║██╔══╝░░██║╚██╔╝██║██║░░██║██║░░██║░╚═══██╗" << std::endl;
         std::cout << "╚█████╔╝███████╗██║░░██║╚██████╔╝██████╔╝███████╗██║░╚═╝░██║╚█████╔╝██████╔╝██████╔╝" << std::endl;
         std::cout << "░╚════╝░╚══════╝╚═╝░░░░░░╚═════╝░╚═════╝░╚══════╝╚═╝░░░░░╚═╝░╚════╝░╚═════╝░╚═════╝░" << std::endl;
-        std::cout << COLOR_CYAN << "claudemods arch distribution iso creator v1.0 17-11-2025" << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "claudemods arch distribution iso creator v1.0 18-11-2025" << COLOR_RESET << std::endl;
         std::cout << std::endl;
     }
 
@@ -226,44 +228,44 @@ private:
         std::cout << COLOR_YELLOW << "\nCurrent Settings:" << COLOR_RESET << std::endl;
         std::cout << COLOR_CYAN << "Installation Path: " << COLOR_RESET << getTargetFolder() << std::endl;
         std::cout << COLOR_CYAN << "Username: " << COLOR_RESET
-                  << (new_username.empty() ? "[Not Set]" : new_username) << std::endl;
+        << (new_username.empty() ? "[Not Set]" : new_username) << std::endl;
         std::cout << COLOR_CYAN << "Root Password: " << COLOR_RESET
-                  << (root_password.empty() ? "[Not Set]" : root_password) << std::endl;
+        << (root_password.empty() ? "[Not Set]" : root_password) << std::endl;
         std::cout << COLOR_CYAN << "User Password: " << COLOR_RESET
-                  << (user_password.empty() ? "[Not Set]" : user_password) << std::endl;
+        << (user_password.empty() ? "[Not Set]" : user_password) << std::endl;
         std::cout << COLOR_CYAN << "Timezone: " << COLOR_RESET
-                  << (timezone.empty() ? "[Not Set]" : timezone) << std::endl;
+        << (timezone.empty() ? "[Not Set]" : timezone) << std::endl;
         std::cout << COLOR_CYAN << "Keyboard Layout: " << COLOR_RESET
-                  << (keyboard_layout.empty() ? "[Not Set]" : keyboard_layout) << std::endl;
+        << (keyboard_layout.empty() ? "[Not Set]" : keyboard_layout) << std::endl;
         std::cout << COLOR_CYAN << "Kernel: " << COLOR_RESET
-                  << (selected_kernel.empty() ? "[Not Set]" : selected_kernel) << std::endl;
+        << (selected_kernel.empty() ? "[Not Set]" : selected_kernel) << std::endl;
         std::cout << COLOR_CYAN << "Desktop Environment: " << COLOR_RESET
-                  << (current_desktop_name.empty() ? "[Not Set]" : current_desktop_name) << std::endl;
+        << (current_desktop_name.empty() ? "[Not Set]" : current_desktop_name) << std::endl;
         std::cout << std::endl;
     }
 
     // UPDATED: Function to create squashfs image after installation with additional steps
-void create_squashfs_image(const std::string& distro_name) {
-    std::cout << COLOR_CYAN << "Creating squashfs image..." << COLOR_RESET << std::endl;
+    void create_squashfs_image(const std::string& distro_name) {
+        std::cout << COLOR_CYAN << "Creating squashfs image..." << COLOR_RESET << std::endl;
 
-    std::string currentDir = getCurrentDir();
-    std::string target_folder = getTargetFolder();
+        std::string currentDir = getCurrentDir();
+        std::string target_folder = getTargetFolder();
 
-    // NEW: Clean pacman cache before creating squashfs
-    std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
-    std::string cache_clean_cmd = "sudo rm -rf " + target_folder + "/var/cache/pacman/pkg/*";
-    if (execute_command(cache_clean_cmd) == 0) {
-        std::cout << COLOR_GREEN << "Pacman cache cleaned successfully!" << COLOR_RESET << std::endl;
-    } else {
-        std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
-    }
+        // NEW: Clean pacman cache before creating squashfs
+        std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
+        std::string cache_clean_cmd = "sudo rm -rf " + target_folder + "/var/cache/pacman/pkg/*";
+        if (execute_command(cache_clean_cmd) == 0) {
+            std::cout << COLOR_GREEN << "Pacman cache cleaned successfully!" << COLOR_RESET << std::endl;
+        } else {
+            std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
+        }
 
-    std::string squashfs_cmd = "sudo mksquashfs " + target_folder + " " + currentDir + "/build-image-arch-img/LiveOS/rootfs.img -noappend -comp xz -b 256K -Xbcj x86 -e etc/udev/rules.d/70-persistent-cd.rules -e etc/udev/rules.d/70-persistent-net.rules -e etc/mtab -e etc/fstab -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/* -e media/* -e lost+found";
+        std::string squashfs_cmd = "sudo mksquashfs " + target_folder + " " + currentDir + "/build-image-arch-img/LiveOS/rootfs.img -noappend -comp xz -b 256K -Xbcj x86 -e etc/udev/rules.d/70-persistent-cd.rules -e etc/udev/rules.d/70-persistent-net.rules -e etc/mtab -e etc/fstab -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/* -e media/* -e lost+found";
 
-    std::cout << COLOR_CYAN << "Executing: " << squashfs_cmd << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "Executing: " << squashfs_cmd << COLOR_RESET << std::endl;
 
-    if (execute_command(squashfs_cmd) == 0) {
-        std::cout << COLOR_GREEN << "Squashfs image created successfully!" << COLOR_RESET << std::endl;
+        if (execute_command(squashfs_cmd) == 0) {
+            std::cout << COLOR_GREEN << "Squashfs image created successfully!" << COLOR_RESET << std::endl;
 
             // Clean up target folder after successful squashfs creation
             std::cout << COLOR_CYAN << "Cleaning up target folder..." << COLOR_RESET << std::endl;
@@ -299,7 +301,7 @@ void create_squashfs_image(const std::string& distro_name) {
             std::string initramfs_cmd = "cd " + currentDir + "/build-image-arch-img && sudo mkinitcpio -c mkinitcpio.conf -g " + currentDir + "/build-image-arch-img/boot/initramfs-x86_64.img";
             if (execute_command(initramfs_cmd) == 0) {
                 std::cout << COLOR_GREEN << "Initramfs generated successfully!" << COLOR_RESET << std::endl;
-                create_iso_image(desktop_name);
+                create_iso_image(distro_name); // FIXED: Changed desktop_name to distro_name
             }
         } else {
             std::cout << COLOR_RED << "Failed to create squashfs image!" << COLOR_RESET << std::endl;
@@ -570,15 +572,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        std::cout << COLOR_CYAN << "Installing GRUB..." << COLOR_RESET << std::endl;
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Arch TTY Grub installation completed in: " << target_folder << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -662,14 +658,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "GNOME Desktop installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -752,14 +743,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "KDE Plasma installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -842,14 +828,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "XFCE installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -932,14 +913,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "LXQt installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1022,14 +998,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Cinnamon installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1112,14 +1083,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "MATE installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1202,14 +1168,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Budgie installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1292,14 +1253,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "i3 installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1382,14 +1338,9 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        // INSTALL GRUB
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"mkinitcpio -P\"");
-
         unmount_system_dirs();
         std::cout << COLOR_GREEN << "Sway installation completed!" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1472,11 +1423,11 @@ void create_squashfs_image(const std::string& distro_name) {
         apply_timezone_keyboard_settings();
         create_user();
 
-        
+
 
         unmount_system_dirs();
         std::cout << COLOR_PURPLE << "Hyprland installed! Note: You may need to configure ~/.config/hypr/hyprland.conf" << COLOR_RESET << std::endl;
-        
+
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-3.4.0-1-x86_64.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-oem-kde-settings-20240616-3-any.pkg.tar " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
@@ -1596,7 +1547,7 @@ void create_squashfs_image(const std::string& distro_name) {
         };
 
         int selected = 0;
-        while (true) {
+        while ( true) {
             system("clear");
             display_header();
             display_current_settings();
@@ -1655,7 +1606,7 @@ public:
 };
 
 int main() {
-    ArchDesktopInstaller installer;
+    ClaudemodsInstaller installer;
     installer.run();
     return 0;
 }
