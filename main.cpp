@@ -933,6 +933,8 @@ private:
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles
+ >/dev/null 2>&1\"");
 
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
@@ -1110,6 +1112,8 @@ private:
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles
+ >/dev/null 2>&1\"");
 
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
@@ -1641,6 +1645,8 @@ private:
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles
+ >/dev/null 2>&1\"");
 
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
@@ -1818,6 +1824,8 @@ private:
         // INSTALL BASE SYSTEM WITH PACSTRAP
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
         execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles
+ >/dev/null 2>&1\"");
 
         // VERIFY PACSTRAP SUCCESS
         std::string test_bin = target_folder + "/bin/bash";
