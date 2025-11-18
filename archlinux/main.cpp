@@ -35,10 +35,10 @@ private:
     std::string user_password;
     std::string timezone;
     std::string keyboard_layout;
-    std::string current_distro_name; // Store the current distro name for ISO
-    std::string selected_kernel;     // ADDED: Missing member variable
-    std::string current_desktop_name; // ADDED: Missing member variable
-    std::string extra_packages;      // NEW: Store extra packages
+    std::string current_distro_name;
+    std::string selected_kernel;
+    std::string current_desktop_name;
+    std::string extra_packages;
 
     // Terminal control for arrow keys
     struct termios oldt, newt;
@@ -175,7 +175,7 @@ private:
                         case 5: setting_value = keyboard_layout.empty() ? "[Not Set]" : keyboard_layout; break;
                         case 6: setting_value = selected_kernel.empty() ? "[Not Set]" : selected_kernel; break;
                         case 7: setting_value = current_desktop_name.empty() ? "[Not Set]" : current_desktop_name; break;
-                        case 8: setting_value = extra_packages.empty() ? "[Not Set]" : extra_packages; break; // NEW: Extra packages display
+                        case 8: setting_value = extra_packages.empty() ? "[Not Set]" : extra_packages; break;
                         default: setting_value = ""; break;
                     }
 
@@ -244,8 +244,111 @@ private:
         std::cout << COLOR_CYAN << "Desktop Environment: " << COLOR_RESET
         << (current_desktop_name.empty() ? "[Not Set]" : current_desktop_name) << std::endl;
         std::cout << COLOR_CYAN << "Extra Packages: " << COLOR_RESET
-        << (extra_packages.empty() ? "[Not Set]" : extra_packages) << std::endl; // NEW: Extra packages display
+        << (extra_packages.empty() ? "[Not Set]" : extra_packages) << std::endl;
         std::cout << std::endl;
+    }
+
+    // NEW: Common installation setup (shared by all desktop environments)
+    bool setup_installation_environment() {
+        std::string target_folder = getTargetFolder();
+        std::string currentDir = getCurrentDir();
+
+        // CREATE TARGET DIRECTORY
+        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
+        execute_command("sudo mkdir -p " + target_folder);
+
+        // VERIFY DIRECTORY WAS CREATED
+        struct stat info;
+        if (stat(target_folder.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
+            return false;
+        }
+
+        if (!(info.st_mode & S_IFDIR)) {
+            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
+            return false;
+        }
+
+        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
+
+        // CREATE ESSENTIAL DIRECTORIES
+        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+
+        // COPY CONFIGURATION FILES
+        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
+        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
+
+        execute_command("sudo pacman -Sy");
+        return true;
+    }
+
+    // NEW: Common package installation function
+    bool install_base_packages(const std::string& desktop_packages, const std::string& display_manager = "") {
+        std::string target_folder = getTargetFolder();
+        
+        // BUILD COMPLETE PACKAGE LIST
+        std::string packages = "base " + selected_kernel + " linux-firmware grub efibootmgr os-prober sudo arch-install-scripts mkinitcpio networkmanager";
+        
+        // Add display manager packages if specified
+        if (!display_manager.empty()) {
+            packages += " " + display_manager;
+        }
+        
+        // Add desktop-specific packages
+        packages += " " + desktop_packages;
+        
+        // Add extra packages if specified
+        if (!extra_packages.empty()) {
+            packages += " " + extra_packages;
+        }
+
+        std::cout << COLOR_CYAN << "Installing packages with pacstrap..." << COLOR_RESET << std::endl;
+        execute_command("sudo pacstrap " + target_folder + " " + packages);
+
+        // VERIFY PACSTRAP SUCCESS
+        std::string test_bin = target_folder + "/bin/bash";
+        struct stat info;
+        if (stat(test_bin.c_str(), &info) != 0) {
+            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
+            return false;
+        }
+
+        execute_command("sudo mkdir -p " + target_folder + "/boot");
+        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
+        return true;
+    }
+
+    // NEW: Common service enablement
+    void enable_services(const std::string& display_manager_service) {
+        std::string target_folder = getTargetFolder();
+        
+        mount_system_dirs();
+        
+        // Always enable NetworkManager
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
+        
+        // Enable display manager if specified
+        if (!display_manager_service.empty()) {
+            execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable " + display_manager_service + "\"");
+        }
+        
+        apply_timezone_keyboard_settings();
+        create_user();
+    }
+
+    // NEW: Common post-installation steps
+    void complete_installation(const std::string& desktop_name) {
+        std::string target_folder = getTargetFolder();
+        
+        // Install Calamares
+        install_calamares();
+        
+        unmount_system_dirs();
+        std::cout << COLOR_GREEN << desktop_name << " installation completed!" << COLOR_RESET << std::endl;
+
+        // CREATE SQUASHFS IMAGE
+        create_squashfs_image(desktop_name);
     }
 
     // NEW: Dedicated function to install Calamares (eliminates code duplication)
@@ -378,7 +481,7 @@ private:
             std::string initramfs_cmd = "cd " + currentDir + "/build-image-arch-img && sudo mkinitcpio -c mkinitcpio.conf -g " + currentDir + "/build-image-arch-img/boot/initramfs-x86_64.img";
             if (execute_command(initramfs_cmd) == 0) {
                 std::cout << COLOR_GREEN << "Initramfs generated successfully!" << COLOR_RESET << std::endl;
-                create_iso_image(distro_name); // FIXED: Changed desktop_name to distro_name
+                create_iso_image(distro_name);
             }
         } else {
             std::cout << COLOR_RED << "Failed to create squashfs image!" << COLOR_RESET << std::endl;
@@ -632,549 +735,149 @@ private:
         }
     }
 
-    // ARCH DESKTOP INSTALLATION FUNCTIONS
+    // UPDATED: Simplified desktop installation functions using common helpers
 
     void install_arch_tty_grub() {
         std::cout << COLOR_CYAN << "Installing Arch TTY Grub..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting Arch TTY Grub installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-        std::cout << COLOR_CYAN << "Working from directory: " << currentDir << COLOR_RESET << std::endl;
-
-        // CREATE TARGET DIRECTORY
-        std::cout << COLOR_CYAN << "Creating target directory: " << target_folder << COLOR_RESET << std::endl;
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // VERIFY DIRECTORY WAS CREATED
-        struct stat info;
-        if (stat(target_folder.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "Failed to create target directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-
-        if (!(info.st_mode & S_IFDIR)) {
-            std::cerr << COLOR_RED << "Target path is not a directory: " << target_folder << COLOR_RESET << std::endl;
-            return;
-        }
-
-        std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL BASE SYSTEM WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base " + selected_kernel + " linux-firmware grub efibootmgr os-prober sudo arch-install-scripts mkinitcpio vim nano bash-completion systemd networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        // VERIFY PACSTRAP SUCCESS
-        std::string test_bin = target_folder + "/bin/bash";
-        if (stat(test_bin.c_str(), &info) != 0) {
-            std::cerr << COLOR_RED << "pacstrap failed! /bin/bash not found in target." << COLOR_RESET << std::endl;
-            return;
-        }
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Arch TTY Grub installation completed in: " << target_folder << COLOR_RESET << std::endl;
-
-        // CREATE SQUASHFS IMAGE
-        create_squashfs_image("Arch-TTY-Grub");
+        if (!setup_installation_environment()) return;
+        
+        // TTY-specific packages (no desktop, no display manager)
+        std::string desktop_packages = "vim nano bash-completion systemd";
+        if (!install_base_packages(desktop_packages, "")) return;
+        
+        // Enable services (no display manager for TTY)
+        enable_services("");
+        
+        complete_installation("Arch-TTY-Grub");
     }
 
     void install_gnome_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch GNOME Desktop..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting GNOME installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL GNOME WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing GNOME Desktop with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base gnome gnome-extra gdm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable gdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "GNOME Desktop installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-GNOME");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "gnome gnome-extra";
+        if (!install_base_packages(desktop_packages, "gdm")) return;
+        
+        enable_services("gdm");
+        complete_installation("Arch-GNOME");
     }
 
     void install_kde_plasma() {
         std::cout << COLOR_CYAN << "Installing Arch KDE Plasma..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting KDE Plasma installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL KDE WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing KDE Plasma with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base plasma sddm dolphin konsole kate grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "KDE Plasma installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-KDE-Plasma");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "plasma sddm dolphin konsole kate";
+        if (!install_base_packages(desktop_packages, "sddm")) return;
+        
+        enable_services("sddm");
+        complete_installation("Arch-KDE-Plasma");
     }
 
     void install_xfce_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch XFCE..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting XFCE installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL XFCE WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing XFCE with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base xfce4 xfce4-goodies lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "XFCE installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-XFCE");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "xfce4 xfce4-goodies lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-XFCE");
     }
 
     void install_lxqt_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch LXQt..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting LXQt installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL LXQT WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing LXQt with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base lxqt sddm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "LXQt installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-LXQt");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "lxqt sddm";
+        if (!install_base_packages(desktop_packages, "sddm")) return;
+        
+        enable_services("sddm");
+        complete_installation("Arch-LXQt");
     }
 
     void install_cinnamon_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch Cinnamon..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting Cinnamon installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL CINNAMON WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing Cinnamon with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base cinnamon lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
-
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
         
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Cinnamon installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-Cinnamon");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "cinnamon lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-Cinnamon");
     }
 
     void install_mate_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch MATE..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting MATE installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL MATE WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing MATE with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base mate mate-extra lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "MATE installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-MATE");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "mate mate-extra lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-MATE");
     }
 
     void install_budgie_desktop() {
         std::cout << COLOR_CYAN << "Installing Arch Budgie..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting Budgie installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL BUDGIE WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing Budgie with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base budgie-desktop lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Budgie installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-Budgie");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "budgie-desktop lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-Budgie");
     }
 
     void install_i3_wm() {
         std::cout << COLOR_CYAN << "Installing Arch i3 (tiling WM)..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting i3 installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL i3 WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing i3 with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base i3-wm i3status i3lock dmenu lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
-         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "i3 installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-i3");
+        
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "i3-wm i3status i3lock dmenu lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-i3");
     }
 
     void install_sway_wm() {
         std::cout << COLOR_CYAN << "Installing Arch Sway (Wayland tiling)..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting Sway installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL SWAY WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing Sway with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base sway swaybg waybar wofi lightdm lightdm-gtk-greeter grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable lightdm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
         
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
-
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << "Sway installation completed!" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-Sway");
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "sway swaybg waybar wofi lightdm lightdm-gtk-greeter";
+        if (!install_base_packages(desktop_packages, "lightdm")) return;
+        
+        enable_services("lightdm");
+        complete_installation("Arch-Sway");
     }
 
     void install_hyprland() {
         std::cout << COLOR_PURPLE << "Installing Arch Hyprland (Modern Wayland Compositor)..." << COLOR_RESET << std::endl;
-        std::string target_folder = getTargetFolder();
-        std::cout << COLOR_CYAN << "Starting Hyprland installation in: " << target_folder << COLOR_RESET << std::endl;
-
-        std::string currentDir = getCurrentDir();
-
-        // CREATE TARGET DIRECTORY
-        execute_command("sudo mkdir -p " + target_folder);
-
-        // CREATE ESSENTIAL DIRECTORIES
-        execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        // COPY CONFIGURATION FILES
-        execute_command("sudo cp -r " + currentDir + "/vconsole.conf " + target_folder + "/etc/vconsole.conf");
-        execute_command("sudo cp -r /etc/resolv.conf " + target_folder + "/etc/resolv.conf");
-
-        execute_command("sudo pacman -Sy");
-
-        // INSTALL HYPRLAND WITH PACSTRAP - UPDATED: Include extra packages
-        std::cout << COLOR_CYAN << "Installing Hyprland with pacstrap..." << COLOR_RESET << std::endl;
-        std::string packages = "base hyprland waybar rofi wl-clipboard sddm grub efibootmgr os-prober arch-install-scripts mkinitcpio " + selected_kernel + " linux-firmware sudo networkmanager";
-        if (!extra_packages.empty()) {
-            packages += " " + extra_packages;
-        }
-        execute_command("sudo pacstrap " + target_folder + " " + packages);
-
-        execute_command("sudo mkdir -p " + target_folder + "/boot");
-        execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
-
-        mount_system_dirs();
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable sddm\"");
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-
-        apply_timezone_keyboard_settings();
-        create_user();
-
-        // UPDATED: Use the dedicated Calamares installation function
-        install_calamares();
         
+        if (!setup_installation_environment()) return;
+        
+        std::string desktop_packages = "hyprland waybar rofi wl-clipboard sddm";
+        if (!install_base_packages(desktop_packages, "sddm")) return;
+        
+        enable_services("sddm");
+        
+        std::string target_folder = getTargetFolder();
         unmount_system_dirs();
         std::cout << COLOR_PURPLE << "Hyprland installed! Note: You may need to configure ~/.config/hypr/hyprland.conf" << COLOR_RESET << std::endl;
 
         create_squashfs_image("Arch-Hyprland");
     }
 
-    // Show desktop selection menu with ALL options - MODIFIED: Only set current_desktop_name, don't install
+    // Show desktop selection menu with ALL options
     void show_desktop_selection() {
         std::vector<std::string> desktop_options = {
             "Arch TTY Grub (Terminal Only)",
@@ -1256,8 +959,8 @@ private:
             "Set Keyboard Layout",
             "Set Kernel",
             "Select Desktop Environment",
-            "Install Extra Packages",  // NEW: Extra packages option
-            "Start Installation",      // NEW: Start installation option
+            "Install Extra Packages",
+            "Start Installation",
             "Exit"
         };
 
@@ -1297,10 +1000,10 @@ private:
                 case 7:
                     show_desktop_selection();
                     break;
-                case 8:  // NEW: Install Extra Packages
+                case 8:
                     set_extra_packages();
                     break;
-                case 9:  // NEW: Start Installation
+                case 9:
                     start_installation();
                     break;
                 case 10:
