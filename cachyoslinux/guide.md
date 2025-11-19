@@ -44,7 +44,7 @@ C++ tool for building custom CachyOS Linux distribution ISOs. 🛠️
 ℹ️ Please note: the kernel you select you will need to be currently running for this to work
 
 ## ⚙️ Setup Calamares
-🔧 Once you boot your ISO if you didn't select linux-cachyos default ISO, the kernel you select will need to be added to `/usr/share/calamares/modules/initcpio.conf` and `/etc/calamares/modules/initcpio.conf`
+🔧 Once you boot your ISO if you didn't select linux-cachyos kernel, the kernel you select will need to be added to `/usr/share/calamares/modules/initcpio.conf` and `/etc/calamares/modules/initcpio.conf`
 
 📝 Change line `linux.cachyos` to e.g `linux-cachyos-bore`
 
