@@ -2,7 +2,7 @@
 Comment[en_GB]=
 Comment=
 Comment[en_US]=
-Exec=cd /opt/rsync-installer && konsole -e ./rsync.sh
+Exec=konsole -e ./rsync.sh
 GenericName[en_GB]=claudemods rsync ext4 installer
 GenericName=claudemods rsync ext4 installer
 GenericName[en_US]=claudemods rsync ext4 installer
@@ -11,7 +11,7 @@ MimeType=
 Name[en_GB]=claudemods rsync ext4 installer
 Name=claudemods rsync ext4 installer
 Name[en_US]=claudemods rsync ext4 installer
-Path=/opt/Arch-Systemtool/
+Path=/opt/rsync-installer
 PrefersNonDefaultGPU=false
 StartupNotify=true
 Terminal=false
