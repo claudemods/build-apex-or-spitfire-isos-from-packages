@@ -394,14 +394,16 @@ private:
         create_user();
     }
 
-    // NEW: Common post-installation steps
+    // FIXED: Common post-installation steps - unmount AFTER Calamares installation
     void complete_installation(const std::string& desktop_name) {
         std::string target_folder = getFullTargetPath();
 
-        // Install Calamares
+        // Install Calamares (requires mounted system directories)
         install_calamares();
 
+        // NOW unmount system directories after Calamares is installed
         unmount_system_dirs();
+        
         std::cout << COLOR_GREEN << desktop_name << " installation completed!" << COLOR_RESET << std::endl;
 
         // CREATE SQUASHFS IMAGE
@@ -944,12 +946,7 @@ private:
         if (!install_base_packages(desktop_packages, "sddm")) return;
 
         enable_services("sddm");
-
-        std::string target_folder = getFullTargetPath();
-        unmount_system_dirs();
-        std::cout << COLOR_PURPLE << "Hyprland installed! Note: You may need to configure ~/.config/hypr/hyprland.conf" << COLOR_RESET << std::endl;
-
-        create_squashfs_image("Arch-Hyprland");
+        complete_installation("Arch-Hyprland");
     }
 
     // Show desktop selection menu with ALL options
