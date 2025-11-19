@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0 - 19-11-2025 23:16AM GMT (UK time)
+- spitfire and cachyos working fine arch calamares is broken but you can make isos
+- all configuration menus working
+- new guides for all distributions
+- code for all distributions reformed to be better 
+
+
 ## v1.0 - 19-11-2025 03:05AM GMT (UK time)
 
 ### claudemods Iso Creator (worked last i tried but has had alot changed)
