@@ -2,19 +2,19 @@
 
 ## v1.0 - 19-11-2025 03:05 GMT (UK time)
 
-### ClaudeMods ISO Creator
+### claudemods Iso Creator (worked last i tried but has had alot changed)
 - lots added to claudemods iso creator
 - including a configuration file method
 - also added a function for adding your own extra packages
 
-### ClaudeMods CachyOS ISO Creator  
+### claudemods CachyOS Iso Creator (currently broken)
 - lots added to claudemods cachyos iso creator
 - including a configuration file method
 - also added a function for adding your own extra packages
 - based of claudemods and arch distribution iso creator
 - many methods have been transfer over to make is a good base but lots needs to be adjusted to make it solid
 
-### ClaudeMods Arch ISO Creator
+### claudemods Arch Iso Creator (could be broken)
 - lots added to claudemods arch iso creator
 - including a configuration file method
 - also added a function for adding your own extra packages
