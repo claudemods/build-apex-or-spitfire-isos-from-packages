@@ -476,7 +476,7 @@ private:
         execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
         execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default/grub");
-        execute_command("sudo unzip -o -q " + currentDir + "/boot.zip -d " + target_folder + "/boot");
+        execute_command("sudo unzip -o -q " + currentDir + "/bootcachyos.zip -d " + target_folder + "/boot");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"plymouth-set-default-theme -R cachyos-bootanimation\"");
 
