@@ -11,4 +11,4 @@
 
 <div align="center">
 
-##  [Click Here For arch linux guide (being built)]()
+##  [Click Here For arch linux guide](https://github.com/claudemods/claudemods-distribution-iso-creator-Beta/blob/main/archlinux/archguide.md)
