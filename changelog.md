@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0 - 19-11-2025 03:05 GMT (UK time)
+## v1.0 - 19-11-2025 03:05AM GMT (UK time)
 
 ### claudemods Iso Creator (worked last i tried but has had alot changed)
 - lots added to claudemods iso creator
