@@ -36,6 +36,7 @@ private:
     std::string timezone;
     std::string keyboard_layout;
     std::string current_distro_name; // Store the current distro name for ISO
+    std::string extra_packages; // Store extra packages to install
 
     // Terminal control for arrow keys
     struct termios oldt, newt;
@@ -56,6 +57,7 @@ private:
             file << "timezone=" << timezone << std::endl;
             file << "keyboard_layout=" << keyboard_layout << std::endl;
             file << "current_distro=" << current_distro_name << std::endl;
+            file << "extra_packages=" << extra_packages << std::endl;
             file.close();
             std::cout << COLOR_GREEN << "Configuration saved to " << configFile << COLOR_RESET << std::endl;
         } else {
@@ -81,6 +83,7 @@ private:
                     else if (key == "timezone") timezone = value;
                     else if (key == "keyboard_layout") keyboard_layout = value;
                     else if (key == "current_distro") current_distro_name = value;
+                    else if (key == "extra_packages") extra_packages = value;
                 }
             }
             file.close();
@@ -161,7 +164,7 @@ private:
         std::cout << "██║░░██╗██║░░░░░██╔══██║██║░░░██║██║░░██║██╔══╝░░██║╚██╔╝██║██║░░██║██║░░██║░╚═══██╗" << std::endl;
         std::cout << "╚█████╔╝███████╗██║░░██║╚██████╔╝██████╔╝███████╗██║░╚═╝░██║╚█████╔╝██████╔╝██████╔╝" << std::endl;
         std::cout << "░╚════╝░╚══════╝╚═╝░░░░░░╚═════╝░╚═════╝░╚══════╝╚═╝░░░░░╚═╝░╚════╝░╚═════╝░╚═════╝░" << std::endl;
-        std::cout << COLOR_CYAN << "claudemods distribution iso creator Beta v1.0 18-11-2025" << COLOR_RESET << std::endl;
+        std::cout << COLOR_CYAN << "claudemods distribution iso creator Beta v1.0 19-11-2025" << COLOR_RESET << std::endl;
         std::cout << std::endl;
     }
 
@@ -222,6 +225,7 @@ private:
                         case 4: setting_value = timezone.empty() ? "[Not Set]" : timezone; break;
                         case 5: setting_value = keyboard_layout.empty() ? "[Not Set]" : keyboard_layout; break;
                         case 6: setting_value = current_distro_name.empty() ? "[Not Set]" : current_distro_name; break;
+                        case 7: setting_value = extra_packages.empty() ? "[Not Set]" : extra_packages; break;
                         default: setting_value = ""; break;
                     }
 
@@ -293,6 +297,8 @@ private:
         << (keyboard_layout.empty() ? "[Not Set]" : keyboard_layout) << std::endl;
         std::cout << COLOR_CYAN << "Current Distro: " << COLOR_RESET
         << (current_distro_name.empty() ? "[Not Set]" : current_distro_name) << std::endl;
+        std::cout << COLOR_CYAN << "Extra Packages: " << COLOR_RESET
+        << (extra_packages.empty() ? "[Not Set]" : extra_packages) << std::endl;
         std::cout << std::endl;
     }
 
@@ -670,6 +676,12 @@ private:
         saveConfiguration(); // Save after setting
     }
 
+    // NEW: Set extra packages
+    void set_extra_packages() {
+        extra_packages = get_input("Enter extra packages (space separated): ");
+        saveConfiguration(); // Save after setting
+    }
+
     // NEW: Check if all required settings are configured
     bool check_settings_configured() {
         if (new_username.empty()) {
@@ -690,6 +702,10 @@ private:
         }
         if (keyboard_layout.empty()) {
             std::cout << COLOR_RED << "Error: Keyboard layout not set!" << COLOR_RESET << std::endl;
+            return false;
+        }
+        if (current_distro_name.empty()) {
+            std::cout << COLOR_RED << "Error: No distribution selected!" << COLOR_RESET << std::endl;
             return false;
         }
         return true;
@@ -741,15 +757,37 @@ private:
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"locale-gen\"");
     }
 
-    // UPDATED: Spitfire CKGE Minimal - using common functions
-    void install_spitfire_ckge_minimal() {
-        current_distro_name = "Spitfire-CKGE-Minimal";
-        saveConfiguration(); // Save distro selection
+    // NEW: Start installation based on selected distro
+    void start_installation() {
         if (!check_settings_configured()) {
             std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
             return;
         }
 
+        // Determine which distribution to install based on current_distro_name
+        if (current_distro_name == "Spitfire-CKGE-Minimal") {
+            install_spitfire_ckge_minimal();
+        } else if (current_distro_name == "Spitfire-CKGE-Minimal-Dev") {
+            install_spitfire_ckge_minimal_dev();
+        } else if (current_distro_name == "Spitfire-CKGE-Full") {
+            install_spitfire_ckge_full();
+        } else if (current_distro_name == "Spitfire-CKGE-Full-Dev") {
+            install_spitfire_ckge_full_dev();
+        } else if (current_distro_name == "Apex-CKGE-Minimal") {
+            install_apex_ckge_minimal();
+        } else if (current_distro_name == "Apex-CKGE-Minimal-Dev") {
+            install_apex_ckge_minimal_dev();
+        } else if (current_distro_name == "Apex-CKGE-Full") {
+            install_apex_ckge_full();
+        } else if (current_distro_name == "Apex-CKGE-Full-Dev") {
+            install_apex_ckge_full_dev();
+        } else {
+            std::cout << COLOR_RED << "No valid distribution selected!" << COLOR_RESET << std::endl;
+        }
+    }
+
+    // UPDATED: Spitfire CKGE Minimal - using common functions with extra packages integration
+    void install_spitfire_ckge_minimal() {
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -761,9 +799,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
 
         // VERIFY PACSTRAP SUCCESS
         if (!verify_pacstrap_success(target_folder)) return;
@@ -822,15 +864,8 @@ private:
         create_squashfs_image("Spitfire-CKGE-Minimal");
     }
 
-    // UPDATED: Spitfire CKGE Minimal Dev - using common functions
+    // UPDATED: Spitfire CKGE Minimal Dev - using common functions with extra packages integration
     void install_spitfire_ckge_minimal_dev() {
-        current_distro_name = "Spitfire-CKGE-Minimal-Dev";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Minimal Dev..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -842,9 +877,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-dev");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-dev";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
 
         // VERIFY PACSTRAP SUCCESS
         if (!verify_pacstrap_success(target_folder)) return;
@@ -903,15 +942,8 @@ private:
         create_squashfs_image("Spitfire-CKGE-Minimal-Dev");
     }
 
-    // UPDATED: Spitfire CKGE Full - using common functions
+    // UPDATED: Spitfire CKGE Full - using common functions with extra packages integration
     void install_spitfire_ckge_full() {
-        current_distro_name = "Spitfire-CKGE-Full";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -923,9 +955,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-full";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles\"");
 
         // VERIFY PACSTRAP SUCCESS
@@ -985,15 +1021,8 @@ private:
         create_squashfs_image("Spitfire-CKGE-Full");
     }
 
-    // UPDATED: Spitfire CKGE Full Dev - using common functions
+    // UPDATED: Spitfire CKGE Full Dev - using common functions with extra packages integration
     void install_spitfire_ckge_full_dev() {
-        current_distro_name = "Spitfire-CKGE-Full-Dev";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_ORANGE << "Installing Spitfire CKGE Full Dev..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Spitfire CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1005,9 +1034,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-fulldev";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles\"");
 
         // VERIFY PACSTRAP SUCCESS
@@ -1067,15 +1100,8 @@ private:
         create_squashfs_image("Spitfire-CKGE-Full-Dev");
     }
 
-    // UPDATED: Apex CKGE Minimal - using common functions
+    // UPDATED: Apex CKGE Minimal - using common functions with extra packages integration
     void install_apex_ckge_minimal() {
-        current_distro_name = "Apex-CKGE-Minimal";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1087,9 +1113,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
 
         // VERIFY PACSTRAP SUCCESS
         if (!verify_pacstrap_success(target_folder)) return;
@@ -1148,15 +1178,8 @@ private:
         create_squashfs_image("Apex-CKGE-Minimal");
     }
 
-    // UPDATED: Apex CKGE Minimal Dev - using common functions
+    // UPDATED: Apex CKGE Minimal Dev - using common functions with extra packages integration
     void install_apex_ckge_minimal_dev() {
-        current_distro_name = "Apex-CKGE-Minimal-Dev";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Minimal Dev..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Minimal Dev installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1168,9 +1191,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-dev");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-dev";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
 
         // VERIFY PACSTRAP SUCCESS
         if (!verify_pacstrap_success(target_folder)) return;
@@ -1229,15 +1256,8 @@ private:
         create_squashfs_image("Apex-CKGE-Minimal-Dev");
     }
 
-    // UPDATED: Apex CKGE Full - using common functions
+    // UPDATED: Apex CKGE Full - using common functions with extra packages integration
     void install_apex_ckge_full() {
-        current_distro_name = "Apex-CKGE-Full";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Full..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1249,9 +1269,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-full");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-full";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles\"");
 
         // VERIFY PACSTRAP SUCCESS
@@ -1311,15 +1335,8 @@ private:
         create_squashfs_image("Apex-CKGE-Full");
     }
 
-    // UPDATED: Apex CKGE Full Dev - using common functions
+    // UPDATED: Apex CKGE Full Dev - using common functions with extra packages integration
     void install_apex_ckge_full_dev() {
-        current_distro_name = "Apex-CKGE-Full-Dev";
-        saveConfiguration(); // Save distro selection
-        if (!check_settings_configured()) {
-            std::cout << COLOR_RED << "Cannot proceed with installation. Please configure all settings first." << COLOR_RESET << std::endl;
-            return;
-        }
-
         std::cout << COLOR_PURPLE << "Installing Apex CKGE Full Dev..." << COLOR_RESET << std::endl;
         std::string target_folder = getTargetFolder();
         std::cout << COLOR_CYAN << "Starting Apex CKGE Full Dev installation in: " << target_folder << COLOR_RESET << std::endl;
@@ -1331,9 +1348,13 @@ private:
         if (!setup_target_directory(target_folder)) return;
         setup_pacman_and_files(target_folder);
 
-        // INSTALL BASE SYSTEM WITH PACSTRAP
+        // INSTALL BASE SYSTEM WITH PACSTRAP - INTEGRATE EXTRA PACKAGES
         std::cout << COLOR_CYAN << "Installing base system with pacstrap..." << COLOR_RESET << std::endl;
-        execute_command("sudo pacstrap " + target_folder + " claudemods-desktop-fulldev");
+        std::string pacstrap_cmd = "sudo pacstrap " + target_folder + " claudemods-desktop-fulldev";
+        if (!extra_packages.empty()) {
+            pacstrap_cmd += " " + extra_packages;
+        }
+        execute_command(pacstrap_cmd);
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo && flatpak install -y flathub com.usebottles.bottles\"");
 
         // VERIFY PACSTRAP SUCCESS
@@ -1413,28 +1434,44 @@ private:
 
             switch(selected) {
                 case 0:
-                    install_spitfire_ckge_minimal();
+                    current_distro_name = "Spitfire-CKGE-Minimal";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Spitfire CKGE Minimal selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 1:
-                    install_spitfire_ckge_minimal_dev();
+                    current_distro_name = "Spitfire-CKGE-Minimal-Dev";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Spitfire CKGE Minimal Dev selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 2:
-                    install_spitfire_ckge_full();
+                    current_distro_name = "Spitfire-CKGE-Full";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Spitfire CKGE Full selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 3:
-                    install_spitfire_ckge_full_dev();
+                    current_distro_name = "Spitfire-CKGE-Full-Dev";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Spitfire CKGE Full Dev selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 4:
-                    install_apex_ckge_minimal();
+                    current_distro_name = "Apex-CKGE-Minimal";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Apex CKGE Minimal selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 5:
-                    install_apex_ckge_minimal_dev();
+                    current_distro_name = "Apex-CKGE-Minimal-Dev";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Apex CKGE Minimal Dev selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 6:
-                    install_apex_ckge_full();
+                    current_distro_name = "Apex-CKGE-Full";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Apex CKGE Full selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 7:
-                    install_apex_ckge_full_dev();
+                    current_distro_name = "Apex-CKGE-Full-Dev";
+                    saveConfiguration();
+                    std::cout << COLOR_GREEN << "Apex CKGE Full Dev selected. Use 'Start Installation' to begin." << COLOR_RESET << std::endl;
                     break;
                 case 8:
                     return;
@@ -1454,6 +1491,8 @@ private:
             "Set Timezone",
             "Set Keyboard Layout",
             "Select Distro to Install",
+            "Install Extra Packages",
+            "Start Installation",
             "Exit"
         };
 
@@ -1488,6 +1527,12 @@ private:
                     show_distro_selection();
                     break;
                 case 7:
+                    set_extra_packages();
+                    break;
+                case 8:
+                    start_installation();
+                    break;
+                case 9:
                     std::cout << COLOR_GREEN << "Exiting. Goodbye!" << COLOR_RESET << std::endl;
                     return;
             }
