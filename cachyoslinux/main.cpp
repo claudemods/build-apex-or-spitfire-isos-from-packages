@@ -468,6 +468,7 @@ private:
         execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
         
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.config/fish");
+        execute_command("sudo cp " + currentDir + "/fish_variables " + target_folder + "/home/" + new_username + "/.config/fish/fish_variables");
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
 
@@ -602,12 +603,24 @@ private:
 
         if (execute_command(xorriso_cmd) == 0) {
             std::cout << COLOR_GREEN << "ISO image created successfully: " << distro_name + ".iso" << COLOR_RESET << std::endl;
-            // Change ownership to current user
-            execute_command("sudo chown $USER:$USER \"" + currentDir + "/" + distro_name + ".iso\"");
+
+            // Get username using whoami
+            FILE* whoami_pipe = popen("whoami", "r");
+            if (whoami_pipe) {
+                char username[256];
+                if (fgets(username, sizeof(username), whoami_pipe)) {
+                    // Remove newline
+                    username[strcspn(username, "\n")] = 0;
+                    // Change ownership to current user
+                    std::string chown_cmd = "sudo chown " + std::string(username) + ":" + std::string(username) + " \"" + currentDir + "/" + distro_name + ".iso\"";
+                    execute_command(chown_cmd);
+                }
+                pclose(whoami_pipe);
+            }
         } else {
             std::cout << COLOR_RED << "Failed to create ISO image!" << COLOR_RESET << std::endl;
         }
-    } 
+    }
 
     // Set username
     void set_username() {
