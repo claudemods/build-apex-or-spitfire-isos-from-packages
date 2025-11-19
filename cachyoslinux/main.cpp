@@ -194,7 +194,7 @@ private:
         return ch;
     }
 
-    // FIXED: Updated show_menu to properly display loaded configuration values and fix duplication
+    // FIXED: Updated show_menu to show ALL values exactly as set (including passwords)
     int show_menu(const std::vector<std::string>& options, const std::string& title, int selected = 0) {
         setup_terminal();
 
@@ -215,15 +215,15 @@ private:
                     std::cout << "  ";
                 }
 
-                // Create the menu line with proper formatting
+                // Create the menu line with proper formatting - SHOW ALL VALUES AS SET
                 std::string menu_line;
-                if (title == "claudemods CachyOS distribution iso creator") {
+                if (title == "claudemods distribution iso creator arch") {
                     std::string setting_value;
                     switch(i) {
                         case 0: setting_value = getTargetFolder(); break;
                         case 1: setting_value = new_username.empty() ? "[Not Set]" : new_username; break;
-                        case 2: setting_value = root_password.empty() ? "[Not Set]" : root_password; break;
-                        case 3: setting_value = user_password.empty() ? "[Not Set]" : user_password; break;
+                        case 2: setting_value = root_password.empty() ? "[Not Set]" : root_password; break; // Show actual password
+                        case 3: setting_value = user_password.empty() ? "[Not Set]" : user_password; break; // Show actual password
                         case 4: setting_value = timezone.empty() ? "[Not Set]" : timezone; break;
                         case 5: setting_value = keyboard_layout.empty() ? "[Not Set]" : keyboard_layout; break;
                         case 6: setting_value = selected_kernel.empty() ? "[Not Set]" : selected_kernel; break;
@@ -232,7 +232,7 @@ private:
                         default: setting_value = ""; break;
                     }
 
-                    // FIXED: For installation path (i=0), don't add setting_value to avoid duplication
+                    // For installation path (i=0), don't add setting_value to avoid duplication
                     if (i == 0) {
                         menu_line = options[i];
                     } else {
@@ -282,16 +282,16 @@ private:
         return status;
     }
 
-    // FIXED: Function to display current settings on main menu - now shows loaded values
+    // FIXED: Function to display current settings on main menu - now shows ALL values as set
     void display_current_settings() {
         std::cout << COLOR_YELLOW << "\nCurrent Settings:" << COLOR_RESET << std::endl;
         std::cout << COLOR_CYAN << "Installation Path: " << COLOR_RESET << getTargetFolder() << std::endl;
         std::cout << COLOR_CYAN << "Username: " << COLOR_RESET
         << (new_username.empty() ? "[Not Set]" : new_username) << std::endl;
         std::cout << COLOR_CYAN << "Root Password: " << COLOR_RESET
-        << (root_password.empty() ? "[Not Set]" : "******") << std::endl;
+        << (root_password.empty() ? "[Not Set]" : root_password) << std::endl; // Show actual password
         std::cout << COLOR_CYAN << "User Password: " << COLOR_RESET
-        << (user_password.empty() ? "[Not Set]" : "******") << std::endl;
+        << (user_password.empty() ? "[Not Set]" : user_password) << std::endl; // Show actual password
         std::cout << COLOR_CYAN << "Timezone: " << COLOR_RESET
         << (timezone.empty() ? "[Not Set]" : timezone) << std::endl;
         std::cout << COLOR_CYAN << "Keyboard Layout: " << COLOR_RESET
@@ -472,7 +472,7 @@ private:
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share/konsole");
         execute_command("sudo mkdir -p " + target_folder + "/home/" + new_username + "/.local/share");
 
-        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + "/.config/fish/config.fish");
+        execute_command("sudo chmod +x " + target_folder + "/home/" + new_username + ".config/fish/config.fish");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"chmod +x /usr/share/fish/config.fish\"");
         execute_command("sudo cp -r " + currentDir + "/spitfire-ckge-minimal/grub " + target_folder + "/etc/default/grub");
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"grub-mkconfig -o /boot/grub/grub.cfg\"");
@@ -909,7 +909,7 @@ private:
         std::vector<std::string> main_options = {
             "Installation Path: " + getTargetFolder(),
             "Set Username",
-            "Set Root Password",
+            "Set Root Password", 
             "Set User Password",
             "Set Timezone",
             "Set Keyboard Layout",
