@@ -29,19 +29,19 @@
 
 ## Iso Creation Methods
 
-claudemods distributions iso creator Beta v1.0 19-11-2025
+claudemods distributions iso creator Beta v1.0 19-11-2025 (working fine)
 
 ```bash
 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/claudemods/claudemods-distribution-iso-creator-Beta/refs/heads/main/installer/patch.sh)"
 ```
-cachyos distribution iso creator Beta v1.0 19-11-2025 (cachyos distribution options being tested!!)
+cachyos distribution iso creator Beta v1.0 19-11-2025 (working fine)
 
 ```bash
 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/claudemods/claudemods-distribution-iso-creator-Beta/refs/heads/main/cachyoslinux/installer/patch.sh)"
 ```
-arch distribution iso creator Beta v1.0 19-11-2025 (arch distribution options being tested!!)
+arch distribution iso creator Beta v1.0 19-11-2025 (needs more work)
 
 ```bash
 
