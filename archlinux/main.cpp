@@ -554,19 +554,19 @@ private:
         }
     }
 
-    // Create ISO image with XORRISO
-    void create_iso_image(const std::string& desktop_name) {
+    void create_iso_image(const std::string& distro_name) {
         std::cout << COLOR_CYAN << "Creating ISO image with XORRISO..." << COLOR_RESET << std::endl;
 
         std::string currentDir = getCurrentDir();
+        std::string currentDIR = currentDir;
 
-        // Build the XORRISO command
+        // Build the XORRISO command with the distro name as ISO filename
         std::string xorriso_cmd = "sudo xorriso -as mkisofs "
         "--modification-date=\"$(date +%Y%m%d%H%M%S00)\" "
         "--protective-msdos-label "
         "-volid \"2025\" "
-        "-appid \"Arch Linux Desktop Live CD\" "
-        "-publisher \"Arch Linux Installer\" "
+        "-appid \"claudemods Linux Live/Rescue CD\" "
+        "-publisher \"claudemods claudemods101@gmail.com >\" "
         "-preparer \"Prepared by user\" "
         "-r -graft-points -no-pad "
         "--sort-weight 0 / "
@@ -581,17 +581,19 @@ private:
         "-e --interval:appended_partition_2:all:: "
         "-no-emul-boot "
         "-iso-level 3 "
-        "-o \"" + currentDir + "/" + desktop_name + ".iso\" " +
+        "-o \"" + currentDir + "/" + distro_name + ".iso\" " +
         currentDir + "/build-image-arch-img/";
 
         std::cout << COLOR_CYAN << "Executing: " << xorriso_cmd << COLOR_RESET << std::endl;
 
         if (execute_command(xorriso_cmd) == 0) {
-            std::cout << COLOR_GREEN << "ISO image created successfully: " << desktop_name + ".iso" << COLOR_RESET << std::endl;
+            std::cout << COLOR_GREEN << "ISO image created successfully: " << distro_name + ".iso" << COLOR_RESET << std::endl;
+            // Change ownership to current user
+            execute_command("sudo chown $USER:$USER \"" + currentDir + "/" + distro_name + ".iso\"");
         } else {
             std::cout << COLOR_RED << "Failed to create ISO image!" << COLOR_RESET << std::endl;
         }
-    }
+    } 
 
     // Set username
     void set_username() {
