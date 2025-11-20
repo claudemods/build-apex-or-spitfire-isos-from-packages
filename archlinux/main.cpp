@@ -432,7 +432,14 @@ private:
         execute_command("sudo cp " + currentDir + "/calamares-files/calamares-tools-0.1.0-1-any.pkg.tar.zst " + target_folder);
         execute_command("sudo cp " + currentDir + "/calamares-files/ckbcomp-1.227-2-any.pkg.tar " + target_folder);
 
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -Scc\"");
+        // NEW: Clean pacman cache before creating squashfs
+        std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
+        std::string cache_clean_cmd = "sudo rm -rf " + target_folder + "/var/cache/pacman/pkg/*";
+        if (execute_command(cache_clean_cmd) == 0) {
+            std::cout << COLOR_GREEN << "Pacman cache cleaned successfully!" << COLOR_RESET << std::endl;
+        } else {
+            std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
+        }
         
         // Install in chroot
         execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
@@ -478,15 +485,6 @@ private:
         
         std::string currentDir = getCurrentDir();
         std::string target_folder = getFullTargetPath();
-        
-        // NEW: Clean pacman cache before creating squashfs
-        std::cout << COLOR_CYAN << "Cleaning pacman cache..." << COLOR_RESET << std::endl;
-        std::string cache_clean_cmd = "sudo rm -rf " + target_folder + "/var/cache/pacman/pkg/*";
-        if (execute_command(cache_clean_cmd) == 0) {
-            std::cout << COLOR_GREEN << "Pacman cache cleaned successfully!" << COLOR_RESET << std::endl;
-        } else {
-            std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
-        }
         
         std::string squashfs_cmd = "sudo mksquashfs " + target_folder + " " + currentDir + "/build-image-arch-img/LiveOS/rootfs.img -noappend -comp xz -b 256K -Xbcj x86 -e etc/udev/rules.d/70-persistent-cd.rules -e etc/udev/rules.d/70-persistent-net.rules -e etc/mtab -e etc/fstab -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/* -e media/* -e lost+found";
         
