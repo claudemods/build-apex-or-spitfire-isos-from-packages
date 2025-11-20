@@ -379,39 +379,8 @@ private:
         execute_command("sudo mkdir -p " + target_folder + "/boot/grub");
         return true;
     }
-    
-    // NEW: Common service enablement
-    void enable_services(const std::string& display_manager_service) {
-        std::string target_folder = getFullTargetPath();
-        
-        mount_system_dirs();
-        
-        // Always enable NetworkManager
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
-        
-        // Enable display manager if specified
-        if (!display_manager_service.empty()) {
-            execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable " + display_manager_service + "\"");
-        }
-        
-        apply_timezone_keyboard_settings();
-        create_user();
-        // Install Calamares
-        install_calamares();
-    }
-    
-    // NEW: Common post-installation steps
-    void complete_installation(const std::string& desktop_name) {
-        std::string target_folder = getFullTargetPath();
-        
-        unmount_system_dirs();
-        std::cout << COLOR_GREEN << desktop_name << " installation completed!" << COLOR_RESET << std::endl;
-        
-        // CREATE SQUASHFS IMAGE
-        create_squashfs_image(desktop_name);
-    }
-    
-    // NEW: Dedicated function to install Calamares (eliminates code duplication)
+
+// NEW: Dedicated function to install Calamares (eliminates code duplication)
     void install_calamares() {
         std::string target_folder = getFullTargetPath();
         std::string currentDir = getCurrentDir();
@@ -476,6 +445,37 @@ private:
         
     
         std::cout << COLOR_GREEN << "Calamares installation completed!" << COLOR_RESET << std::endl;
+    }
+    
+    // NEW: Common service enablement
+    void enable_services(const std::string& display_manager_service) {
+        std::string target_folder = getFullTargetPath();
+        
+        mount_system_dirs();
+        
+        // Always enable NetworkManager
+        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable NetworkManager\"");
+        
+        // Enable display manager if specified
+        if (!display_manager_service.empty()) {
+            execute_command("sudo chroot " + target_folder + " /bin/bash -c \"systemctl enable " + display_manager_service + "\"");
+        }
+        
+        apply_timezone_keyboard_settings();
+        create_user();
+        // Install Calamares
+        install_calamares();
+    }
+    
+    // NEW: Common post-installation steps
+    void complete_installation(const std::string& desktop_name) {
+        std::string target_folder = getFullTargetPath();
+        
+        unmount_system_dirs();
+        std::cout << COLOR_GREEN << desktop_name << " installation completed!" << COLOR_RESET << std::endl;
+        
+        // CREATE SQUASHFS IMAGE
+        create_squashfs_image(desktop_name);
     }
     
     // UPDATED: Function to create squashfs image after installation with additional steps
