@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0 - 28-11-2025 15:56PM GMT (UK time)
+- arch calamares has been fixed meaning the script should be 100% working
+- im running tests soon and will update
+
 ## v1.0 - 28-11-2025 11:41AM GMT (UK time)
 - with a fully updated spitfire ckge and latest script after building a spitfire ckge full dev iso it installs fine
 - this means claudemods and cachyos options are working great!
