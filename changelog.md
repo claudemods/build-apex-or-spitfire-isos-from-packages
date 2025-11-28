@@ -1,7 +1,7 @@
 # Changelog
 
 ## v1.0 - 28-11-2025 11:41AM GMT (UK time)
-- with a fully updated spitfire ckge and latest script after building a spitfire ckge full dev isos it installs fine
+- with a fully updated spitfire ckge and latest script after building a spitfire ckge full dev iso it installs fine
 - this means claudemods and cachyos options are working great!
 - arch needs some work still calamares wont install 
 
