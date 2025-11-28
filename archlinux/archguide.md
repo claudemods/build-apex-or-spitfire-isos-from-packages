@@ -68,9 +68,9 @@ C++ tool for building custom Arch Linux distribution ISOs with multiple desktop 
 - 🌐 Custom layout entry
 
 ## ⚙️ Setup Calamares
-🔧 Once you boot your ISO if you didn't select linux-cachyos kernel, the kernel you select will need to be added to `/usr/share/calamares/modules/initcpio.conf` and `/etc/calamares/modules/initcpio.conf`
+🔧 Once you boot your ISO if you didn't select linux-zen kernel, the kernel you select will need to be added to `/usr/share/calamares/modules/initcpio.conf` and `/etc/calamares/modules/initcpio.conf`
 
-📝 Change line `linux-cachyos` to e.g `linux-zen` before opening calamares
+📝 Change line `linux-zen` to e.g `linux-hardened` before opening calamares
 
 ## 🎯 Usage
 
