@@ -412,9 +412,6 @@ private:
             std::cout << COLOR_RED << "Failed to clean pacman cache!" << COLOR_RESET << std::endl;
         }
         
-        // Install in chroot
-        execute_command("sudo chroot " + target_folder + " /bin/bash -c \"pacman -U *.pkg.tar* --noconfirm\"");
-        
         // Copy calamares config
         execute_command("sudo cp -r " + currentDir + "/calamares-files/calamares " + target_folder + "/etc/");
         
@@ -440,13 +437,6 @@ private:
         // Remove manjaro branding
         execute_command("sudo rm -rf " + target_folder + "/usr/share/calamares/branding/manjaro");
         
-        // Delete the package files from target folder
-        execute_command("sudo rm -f " + target_folder + "/calamares-3.4.0-1-x86_64.pkg.tar.zst");
-        execute_command("sudo rm -f " + target_folder + "/calamares-oem-kde-settings-20240616-3-any.pkg.tar");
-        execute_command("sudo rm -f " + target_folder + "/calamares-tools-0.1.0-1-any.pkg.tar.zst");
-        execute_command("sudo rm -f " + target_folder + "/ckbcomp-1.227-2-any.pkg.tar");
-        
-    
         std::cout << COLOR_GREEN << "Calamares installation completed!" << COLOR_RESET << std::endl;
     }
     
