@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0 - 28-11-2025 18:27PM GMT (UK time)
+- arch has not been fixed to work 100%
+- filesystem packages for arch added btrfs-progs f2fs-tools xfsprogs
+- new calamares and boot artwork added to arch
+- all is working fine now after many tests
+
 ## v1.0 - 28-11-2025 15:56PM GMT (UK time)
 - arch calamares has been fixed meaning the script should be 100% working
 - im running tests soon and will update
