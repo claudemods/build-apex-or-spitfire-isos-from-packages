@@ -360,11 +360,11 @@ private:
 
         // Set package based on desktop selection
         if (current_desktop_name == "CachyOS-TTY-Grub") {
-            packages = "cachyosttygrub f2fs-tools xfsprogs";
+            packages = "cachyosttygrub";
         } else if (current_desktop_name == "CachyOS-KDE-Grub") {
-            packages = "cachyoskdegrub f2fs-tools xfsprogs";
+            packages = "cachyoskdegrub";
         } else if (current_desktop_name == "CachyOS-GNOME-Grub") {
-            packages = "cachyosgnomegrub f2fs-tools xfsprogs";
+            packages = "cachyosgnomegrub";
         }
 
         // Add extra packages if specified
