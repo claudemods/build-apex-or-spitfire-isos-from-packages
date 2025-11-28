@@ -323,6 +323,10 @@ private:
         std::cout << COLOR_GREEN << "Target directory created successfully!" << COLOR_RESET << std::endl;
 
         // CREATE ESSENTIAL DIRECTORIES BEFORE COPYING FILES
+        execute_command("sudo mkdir -p " + target_folder + "/usr/");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/lib");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/lib/initcpio/");
+        execute_command("sudo mkdir -p " + target_folder + "/usr/lib/initcpio/udev/");
         execute_command("sudo cp -r " + currentDir + "11-dm-initramfs.rules " + target_folder + "/usr/lib/initcpio/udev/11-dm-initramfs.rules");
         execute_command("sudo cp -r " + currentDir + "11-dm-initramfs.rules /usr/lib/initcpio/udev/11-dm-initramfs.rules");
         execute_command("sudo mkdir -p " + target_folder + "/etc/pacman.d");
